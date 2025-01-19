@@ -19,6 +19,10 @@ export function formatDateTime(date: Date) {
   return format(date, "LLL dd, y HH:mm:ss");
 }
 
+export function formatTime(date: Date) {
+  return format(date, "HH:mm:ss");
+}
+
 export function formatDuration(ms: number) {
   let v = ms;
   if (ms < 0) v = -ms;

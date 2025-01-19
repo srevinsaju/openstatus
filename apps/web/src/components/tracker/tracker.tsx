@@ -1,55 +1,69 @@
 "use client";
 
 import { cva } from "class-variance-authority";
-import { endOfDay, format, formatDuration, startOfDay } from "date-fns";
+import { format, formatDuration } from "date-fns";
 import { ChevronRight, Info } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 
 import type {
   Incident,
+  Maintenance,
   StatusReport,
   StatusReportUpdate,
 } from "@openstatus/db/src/schema";
-import type { Monitor } from "@openstatus/tinybird";
-import { Tracker as OSTracker, classNames } from "@openstatus/tracker";
 import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-  Separator,
+  Tracker as OSTracker,
+  classNames,
+  endOfDay,
+  startOfDay,
+} from "@openstatus/tracker";
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@openstatus/ui";
+} from "@openstatus/ui/src/components/tooltip";
 
+import type { ResponseStatusTracker } from "@/lib/tb";
 import { cn } from "@/lib/utils";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@openstatus/ui/src/components/hover-card";
+import { Separator } from "@openstatus/ui/src/components/separator";
 
 const tracker = cva("h-10 rounded-full flex-1", {
   variants: {
     variant: {
-      blacklist: "bg-green-500/80 data-[state=open]:bg-green-500",
+      blacklist:
+        "bg-status-operational/80 data-[state=open]:bg-status-operational",
       ...classNames,
     },
     report: {
-      0: "",
-      // IDEA: data-[state=open]:from-40% data-[state=open]:to-40%
-      30: "bg-gradient-to-t from-blue-500/90 hover:from-blue-500 from-30% to-transparent to-30%",
+      false: "",
+      true: classNames.degraded,
+    },
+    incident: {
+      // only used to highlight incident that are 'light' (less than 10 minutes)
+      light: classNames.degraded,
     },
   },
   defaultVariants: {
     variant: "empty",
-    report: 0,
+    report: false,
   },
 });
 
 interface TrackerProps {
-  data: Monitor[];
+  data: ResponseStatusTracker[];
   name: string;
   description?: string;
   reports?: (StatusReport & { statusReportUpdates: StatusReportUpdate[] })[];
   incidents?: Incident[];
+  maintenances?: Maintenance[];
+  showValues?: boolean;
 }
 
 export function Tracker({
@@ -58,13 +72,20 @@ export function Tracker({
   description,
   reports,
   incidents,
+  maintenances,
+  showValues,
 }: TrackerProps) {
-  const tracker = new OSTracker({ data, statusReports: reports, incidents });
+  const tracker = new OSTracker({
+    data,
+    statusReports: reports,
+    incidents,
+    maintenances,
+  });
   const uptime = tracker.totalUptime;
   const isMissing = tracker.isDataMissing;
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex w-full flex-col gap-1.5">
       <div className="flex justify-between text-sm">
         <div className="flex items-center gap-2">
           <p className="line-clamp-1 font-semibold text-foreground">{name}</p>
@@ -81,7 +102,7 @@ export function Tracker({
             </TooltipProvider>
           ) : null}
         </div>
-        {!isMissing ? (
+        {!isMissing && showValues ? (
           <p className="shrink-0 font-light text-muted-foreground">{uptime}%</p>
         ) : null}
       </div>
@@ -89,7 +110,7 @@ export function Tracker({
         <div className="flex flex-row-reverse gap-px sm:gap-0.5">
           {tracker.days.map((props, i) => {
             // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
-            return <Bar key={i} {...props} />;
+            return <Bar key={i} showValues={showValues} {...props} />;
           })}
         </div>
       </div>
@@ -103,6 +124,7 @@ export function Tracker({
 
 type BarProps = OSTracker["days"][number] & {
   className?: string;
+  showValues?: boolean;
 };
 
 export const Bar = ({
@@ -114,13 +136,28 @@ export const Bar = ({
   blacklist,
   statusReports,
   incidents,
+  showValues,
   className,
 }: BarProps) => {
   const [open, setOpen] = React.useState(false);
 
+  // total incident time in ms
+  const incidentLength = incidents.reduce((prev, curr) => {
+    return (
+      prev +
+      Math.abs(
+        (curr.resolvedAt?.getTime() || new Date().getTime()) -
+          curr.startedAt?.getTime(),
+      )
+    );
+  }, 0);
+
+  const isLightIncident = incidentLength > 0 && incidentLength < 600_000; // 10 minutes in ms
+
   const rootClassName = tracker({
-    report: statusReports && statusReports.length > 0 ? 30 : undefined,
+    report: statusReports.length > 0,
     variant: blacklist ? "blacklist" : variant,
+    incident: isLightIncident ? "light" : undefined,
   });
 
   return (
@@ -133,35 +170,19 @@ export const Bar = ({
       <HoverCardTrigger onClick={() => setOpen(true)} asChild>
         <div className={cn(rootClassName, className)} />
       </HoverCardTrigger>
-      <HoverCardContent side="top" className="w-auto max-w-[16rem] p-2">
+      <HoverCardContent side="top" className="w-auto p-2">
         {blacklist ? (
           <p className="text-muted-foreground text-sm">{blacklist}</p>
         ) : (
           <div>
-            <div className="flex gap-2">
-              <div
-                className={cn(
-                  rootClassName,
-                  "h-auto w-1 flex-none rounded-full",
-                )}
-              />
-              <div className="grid flex-1 gap-1">
-                <div className="flex justify-between gap-8 text-sm">
-                  <p className="font-semibold">{label}</p>
-                  <p className="flex-shrink-0 text-muted-foreground">
-                    {format(new Date(day), "MMM d")}
-                  </p>
-                </div>
-                <div className="flex justify-between gap-8 font-light text-muted-foreground text-xs">
-                  <p>
-                    <code className="text-green-500">{count}</code> requests
-                  </p>
-                  <p>
-                    <code className="text-red-500">{count - ok}</code> failed
-                  </p>
-                </div>
-              </div>
-            </div>
+            <BarDescription
+              label={label}
+              day={day}
+              count={count}
+              ok={ok}
+              barClassName={rootClassName}
+              showValues={showValues}
+            />
             {statusReports && statusReports.length > 0 ? (
               <>
                 <Separator className="my-1.5" />
@@ -181,6 +202,48 @@ export const Bar = ({
   );
 };
 
+export function BarDescription({
+  label,
+  day,
+  count,
+  ok,
+  showValues,
+  barClassName,
+  className,
+}: {
+  label: string;
+  day: string;
+  count: number;
+  ok: number;
+  showValues?: boolean;
+  barClassName?: string;
+  className?: string;
+}) {
+  return (
+    <div className={cn("flex gap-2", className)}>
+      <div className={cn(barClassName, "h-auto w-1 flex-none")} />
+      <div className="grid flex-1 gap-1">
+        <div className="flex justify-between gap-8 text-sm">
+          <p className="font-semibold">{label}</p>
+          <p className="flex-shrink-0 text-muted-foreground">
+            {format(new Date(day), "MMM d")}
+          </p>
+        </div>
+        {showValues ? (
+          <div className="flex justify-between gap-8 font-light text-muted-foreground text-xs">
+            <p>
+              <code className="text-status-operational">{count}</code> requests
+            </p>
+            <p>
+              <code className="text-status-down">{count - ok}</code> failed
+            </p>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export function StatusReportList({ reports }: { reports: StatusReport[] }) {
   return (
     <ul>
@@ -188,11 +251,11 @@ export function StatusReportList({ reports }: { reports: StatusReport[] }) {
         <li key={report.id} className="text-muted-foreground text-sm">
           <Link
             // TODO: include setPrefixUrl for local development
-            href={`./incidents/${report.id}`}
+            href={`./events/report/${report.id}`}
             className="group flex items-center justify-between gap-2 hover:text-foreground"
           >
             <span className="truncate">{report.title}</span>
-            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="h-4 w-4 shrink-0" />
           </Link>
         </li>
       ))}
@@ -234,7 +297,7 @@ export function DowntimeText({
 
   return (
     <p className="text-muted-foreground text-xs">
-      Down for{" "}
+      Downtime for{" "}
       {formatDuration(
         { minutes, hours, days },
         { format: ["days", "hours", "minutes", "seconds"], zero: false },

@@ -1,24 +1,22 @@
 import Link from "next/link";
 import { Suspense } from "react";
 
-import { OSTinybird } from "@openstatus/tinybird";
-import { Button } from "@openstatus/ui";
+import { Button } from "@openstatus/ui/src/components/button";
 
 import { Tracker } from "@/components/tracker/tracker";
-import { env } from "@/env";
-
-const tb = new OSTinybird({ token: env.TINY_BIRD_API_KEY });
+import { prepareStatusByPeriod } from "@/lib/tb";
 
 export async function TrackerExample() {
   return (
     <div className="flex w-full flex-col items-center justify-center gap-8">
       <div className="mx-auto w-full max-w-md">
         <Suspense fallback={<ExampleTrackerFallback />}>
-          <ExampleTracker />
+          {/* <ExampleTracker /> */}
+          <MockTracker />
         </Suspense>
       </div>
-      <Button asChild variant="outline" className="rounded-full">
-        <Link href="/play/status">Playground</Link>
+      <Button className="rounded-full" asChild>
+        <Link href="/features/status-page">Learn more</Link>
       </Button>
     </div>
   );
@@ -29,15 +27,27 @@ function ExampleTrackerFallback() {
 }
 
 async function ExampleTracker() {
-  const data = await tb.endpointStatusPeriod("45d")(
-    {
-      monitorId: "1",
-    },
-    {
-      revalidate: 600, // 10 minutes
-    },
-  );
+  const res = await prepareStatusByPeriod("45d").getData({
+    monitorId: "1",
+  });
 
-  if (!data) return null;
-  return <Tracker data={data} name="Ping" description="Pong" />;
+  if (!res.data) return null;
+  return <Tracker data={res.data} name="Ping" description="Pong" showValues />;
+}
+
+function MockTracker() {
+  return (
+    <Tracker data={getPingData()} name="Ping" description="Pong" showValues />
+  );
+}
+
+function getPingData() {
+  return new Array(45).fill(0).map((_, i) => {
+    const date = new Date(new Date().getTime() - i * 24 * 60 * 60 * 1000);
+    return {
+      day: date.toISOString(),
+      ok: 8640,
+      count: 8640,
+    };
+  });
 }

@@ -2,6 +2,7 @@ import type { z } from "zod";
 
 import type {
   Incident,
+  Maintenance,
   PublicMonitor,
   selectPublicStatusReportSchemaWithRelation,
 } from "@openstatus/db/src/schema";
@@ -12,10 +13,16 @@ export const MonitorList = ({
   monitors,
   statusReports,
   incidents,
+  maintenances,
+  showMonitorValues,
+  totalDays,
 }: {
   monitors: PublicMonitor[];
   statusReports: z.infer<typeof selectPublicStatusReportSchemaWithRelation>[];
   incidents: Incident[];
+  maintenances: Maintenance[];
+  showMonitorValues?: boolean;
+  totalDays?: number;
 }) => {
   return (
     <div className="grid gap-4">
@@ -28,12 +35,18 @@ export const MonitorList = ({
         const monitorIncidents = incidents.filter(
           (incident) => incident.monitorId === monitor.id,
         );
+        const monitorMaintenances = maintenances.filter((maintenance) =>
+          maintenance.monitors?.includes(monitor.id),
+        );
         return (
           <Monitor
             key={monitor.id}
             monitor={monitor}
             statusReports={monitorStatusReport}
             incidents={monitorIncidents}
+            maintenances={monitorMaintenances}
+            showValues={showMonitorValues}
+            totalDays={totalDays}
           />
         );
       })}

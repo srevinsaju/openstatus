@@ -1,20 +1,22 @@
 import { TRPCError } from "@trpc/server";
-import { generateSlug } from "random-word-slugs";
 import * as randomWordSlugs from "random-word-slugs";
 import { z } from "zod";
 
-import { and, eq, sql } from "@openstatus/db";
+import { and, eq, gte, isNull, sql } from "@openstatus/db";
 import {
+  application,
   monitor,
+  monitorRun,
   notification,
   page,
+  selectApplicationSchema,
   selectWorkspaceSchema,
   user,
   usersToWorkspaces,
   workspace,
   workspacePlanSchema,
 } from "@openstatus/db/src/schema";
-import type { Limits } from "@openstatus/plans";
+import type { Limits } from "@openstatus/db/src/schema/plan/schema";
 
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 
@@ -73,6 +75,14 @@ export const workspaceRouter = createTRPCRouter({
     });
 
     return selectWorkspaceSchema.parse(result);
+  }),
+
+  getApplicationWorkspaces: protectedProcedure.query(async (opts) => {
+    const result = await opts.ctx.db.query.application.findMany({
+      where: eq(application.workspaceId, opts.ctx.workspace.id),
+    });
+
+    return selectApplicationSchema.array().parse(result);
   }),
 
   getUserWorkspaces: protectedProcedure.query(async (opts) => {
@@ -188,6 +198,8 @@ export const workspaceRouter = createTRPCRouter({
     }),
 
   getCurrentWorkspaceNumbers: protectedProcedure.query(async (opts) => {
+    const lastMonth = new Date().setMonth(new Date().getMonth() - 1);
+
     const currentNumbers = await opts.ctx.db.transaction(async (tx) => {
       const notifications = await tx
         .select({ count: sql<number>`count(*)` })
@@ -196,15 +208,33 @@ export const workspaceRouter = createTRPCRouter({
       const monitors = await tx
         .select({ count: sql<number>`count(*)` })
         .from(monitor)
-        .where(eq(monitor.workspaceId, opts.ctx.workspace.id));
+        .where(
+          and(
+            eq(monitor.workspaceId, opts.ctx.workspace.id),
+            isNull(monitor.deletedAt),
+          ),
+        );
       const pages = await tx
         .select({ count: sql<number>`count(*)` })
         .from(page)
         .where(eq(page.workspaceId, opts.ctx.workspace.id));
+
+      const runs = await tx
+        .select({ count: sql<number>`count(*)` })
+        .from(monitorRun)
+        .where(
+          and(
+            eq(monitorRun.workspaceId, opts.ctx.workspace.id),
+            gte(monitorRun.createdAt, new Date(lastMonth)),
+          ),
+        )
+        .all();
+
       return {
         "notification-channels": notifications?.[0].count || 0,
         monitors: monitors?.[0].count || 0,
         "status-pages": pages?.[0].count || 0,
+        "synthetic-checks": runs?.[0].count || 0,
       } satisfies Partial<Limits>;
     });
 

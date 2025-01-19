@@ -1,10 +1,9 @@
 import { formatDistanceToNowStrict } from "date-fns";
 import Link from "next/link";
 
-import type { LatencyMetric, ResponseTimeMetrics } from "@openstatus/tinybird";
-
 import { periodFormatter } from "@/lib/monitor/utils";
 import type { Period } from "@/lib/monitor/utils";
+import type { ResponseTimeMetrics } from "@/lib/tb";
 import { MetricsCard } from "./metrics-card";
 
 const metricsOrder = [
@@ -13,7 +12,7 @@ const metricsOrder = [
   "p90Latency",
   "p95Latency",
   "p99Latency",
-] satisfies LatencyMetric[];
+] as const;
 
 export function Metrics({
   metrics,
@@ -27,7 +26,7 @@ export function Metrics({
   if (!metrics || metrics.length === 0) return null;
 
   const [current, last] = metrics.sort((a, b) =>
-    (a.lastTimestamp || 0) - (b.lastTimestamp || 0) < 0 ? 1 : -1
+    (a.lastTimestamp || 0) - (b.lastTimestamp || 0) < 0 ? 1 : -1,
   );
 
   const isEmpty = current.count === 0;
@@ -44,7 +43,7 @@ export function Metrics({
 
   return (
     <div className="@container grid gap-6">
-      <div className="grid grid-cols-2 gap-4 @3xl:grid-cols-5 @xl:grid-cols-4 @3xl:gap-6">
+      <div className="grid @3xl:grid-cols-5 @xl:grid-cols-4 grid-cols-2 @3xl:gap-6 gap-4">
         <MetricsCard
           title="uptime"
           value={uptime * 100}
@@ -76,7 +75,7 @@ export function Metrics({
         <MetricsCard title="total pings" value={current.count} suffix="#" />
       </div>
       <div className="grid gap-4">
-        <div className="grid grid-cols-2 gap-4 @3xl:grid-cols-5 @xl:grid-cols-4 @3xl:gap-6">
+        <div className="grid @3xl:grid-cols-5 @xl:grid-cols-4 grid-cols-2 @3xl:gap-6 gap-4">
           {metricsOrder.map((key) => {
             const value = current[key];
             const lastValue = last[key];

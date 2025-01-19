@@ -1,3 +1,5 @@
+/** @jsxImportSource react */
+
 import { Body, Head, Html, Link, Preview } from "@react-email/components";
 
 const FollowUpEmail = () => {
@@ -14,10 +16,8 @@ const FollowUpEmail = () => {
           into any issues, or have any feedback, good or bad!
           <br />
           <br />
-          Feel free to shoot me an email or schedule a call with me here:
-          <a href="https://cal.com/team/openstatus/30min">
-            https://cal.com/team/openstatus/30min
-          </a>
+          Feel free to shoot me an email or schedule a call with me{" "}
+          <a href="https://cal.com/team/openstatus/30min">here</a>
           .
           <br />
           <br />
@@ -36,4 +36,4 @@ const FollowUpEmail = () => {
   );
 };
 
-export { FollowUpEmail };
+export default FollowUpEmail;

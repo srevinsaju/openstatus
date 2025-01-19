@@ -2,13 +2,14 @@
 
 import type { Table } from "@tanstack/react-table";
 import { X } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
-import { Button } from "@openstatus/ui";
+import { Button } from "@openstatus/ui/src/components/button";
 import { flyRegionsDict } from "@openstatus/utils";
 
+import { Icons } from "@/components/icons";
 import { codesDict } from "@/data/code-dictionary";
-import useUpdateSearchParams from "@/hooks/use-update-search-params";
+import { triggerDict } from "@/data/trigger-dictionary";
 import { DataTableFacetedFilter } from "./data-table-faceted-filter";
 import { DataTableFacetedInputDropdown } from "./data-table-faceted-input-dropdown";
 
@@ -20,13 +21,13 @@ export function DataTableToolbar<TData>({
   table,
 }: DataTableToolbarProps<TData>) {
   const router = useRouter();
-  const updateSearchParams = useUpdateSearchParams();
+  const searchParams = useSearchParams();
   const isFiltered = table.getState().columnFilters.length > 0;
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="flex flex-1 flex-wrap items-center gap-2">
-        {table.getColumn("statusCode") && (
+        {table.getColumn("statusCode")?.getIsVisible() && (
           <DataTableFacetedFilter
             column={table.getColumn("statusCode")}
             title="Status Code"
@@ -63,29 +64,41 @@ export function DataTableToolbar<TData>({
             ]}
           />
         )}
-        <DataTableFacetedInputDropdown
-          title="Latency"
-          column={table.getColumn("latency")}
-          options={[
-            { value: "min", label: "Min." },
-            { value: "max", label: "Max." },
-          ]}
-        />
+        {table.getColumn("latency") && (
+          <DataTableFacetedInputDropdown
+            title="Latency"
+            column={table.getColumn("latency")}
+            options={[
+              { value: "min", label: "Min." },
+              { value: "max", label: "Max." },
+            ]}
+          />
+        )}
+        {table.getColumn("trigger") && (
+          <DataTableFacetedFilter
+            column={table.getColumn("trigger")}
+            title="Trigger"
+            options={(["cron", "api"] as const).map((key) => {
+              const { label, icon, value } = triggerDict[key];
+              return {
+                label,
+                value,
+                icon: Icons[icon],
+              };
+            })}
+          />
+        )}
         {isFiltered && (
           <Button
             variant="ghost"
             onClick={() => {
+              const period = searchParams.get("period");
               table.resetColumnFilters();
-
-              // reset filter search params (but not period e.g.)
-              const newSearchParams = updateSearchParams({
-                error: null,
-                statusCode: null,
-                region: null,
-              });
-              router.replace(`?${newSearchParams}`, {
-                scroll: false,
-              });
+              if (period) {
+                router.replace(`?period=${period}`, {
+                  scroll: false,
+                });
+              }
             }}
             className="h-8 px-2 lg:px-3"
           >

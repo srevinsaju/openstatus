@@ -2,10 +2,11 @@ import { TRPCError } from "@trpc/server";
 import type Stripe from "stripe";
 import { z } from "zod";
 
-import { analytics, trackAnalytics } from "@openstatus/analytics";
+import { Events, setupAnalytics } from "@openstatus/analytics";
 import { eq } from "@openstatus/db";
 import { user, workspace } from "@openstatus/db/src/schema";
 
+import { getLimits } from "@openstatus/db/src/schema/plan/utils";
 import { createTRPCRouter, publicProcedure } from "../../trpc";
 import { stripe } from "./shared";
 import { getPlanFromPriceId } from "./utils";
@@ -67,6 +68,7 @@ export const webhookRouter = createTRPCRouter({
         subscriptionId: subscription.id,
         endsAt: new Date(subscription.current_period_end * 1000),
         paidUntil: new Date(subscription.current_period_end * 1000),
+        limits: JSON.stringify(getLimits(plan.plan)),
       })
       .where(eq(workspace.id, result.id))
       .run();
@@ -79,14 +81,13 @@ export const webhookRouter = createTRPCRouter({
         .get();
       if (!userResult) return;
 
-      await analytics.identify(String(userResult.id), {
-        email: customer.email,
-        userId: userResult.id,
+      const analytics = await setupAnalytics({
+        userId: `usr_${userResult.id}`,
+        email: userResult.email || undefined,
+        workspaceId: String(result.id),
+        plan: plan.plan,
       });
-      await trackAnalytics({
-        event: "User Upgraded",
-        email: customer.email,
-      });
+      await analytics.track(Events.UpgradeWorkspace);
     }
   }),
   customerSubscriptionDeleted: webhookProcedure.mutation(async (opts) => {
@@ -96,7 +97,7 @@ export const webhookRouter = createTRPCRouter({
         ? subscription.customer
         : subscription.customer.id;
 
-    await opts.ctx.db
+    const _workspace = await opts.ctx.db
       .update(workspace)
       .set({
         subscriptionId: null,
@@ -104,6 +105,32 @@ export const webhookRouter = createTRPCRouter({
         paidUntil: null,
       })
       .where(eq(workspace.stripeId, customerId))
-      .run();
+      .returning();
+
+    const customer = await stripe.customers.retrieve(customerId);
+
+    if (!_workspace) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Workspace not found",
+      });
+    }
+
+    if (!customer.deleted && customer.email) {
+      const userResult = await opts.ctx.db
+        .select()
+        .from(user)
+        .where(eq(user.email, customer.email))
+        .get();
+      if (!userResult) return;
+
+      const analytics = await setupAnalytics({
+        userId: `usr_${userResult.id}`,
+        email: customer.email || undefined,
+        workspaceId: String(_workspace[0].id),
+        plan: "free",
+      });
+      await analytics.track(Events.DowngradeWorkspace);
+    }
   }),
 });

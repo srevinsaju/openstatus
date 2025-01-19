@@ -4,7 +4,7 @@ import type { Row } from "@tanstack/react-table";
 import { MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import * as React from "react";
+import { useState, useTransition } from "react";
 import { z } from "zod";
 
 import { selectMonitorSchema } from "@openstatus/db/src/schema";
@@ -28,9 +28,8 @@ import {
 
 import { LoadingAnimation } from "@/components/loading-animation";
 import type { RegionChecker } from "@/components/ping-response-analysis/utils";
-import { toastAction } from "@/lib/toast";
+import { toast, toastAction } from "@/lib/toast";
 import { api } from "@/trpc/client";
-
 interface DataTableRowActionsProps<TData> {
   row: Row<TData>;
 }
@@ -38,12 +37,12 @@ interface DataTableRowActionsProps<TData> {
 export function DataTableRowActions<TData>({
   row,
 }: DataTableRowActionsProps<TData>) {
-  const { monitor } = z
-    .object({ monitor: selectMonitorSchema })
+  const { monitor, isLimitReached } = z
+    .object({ monitor: selectMonitorSchema, isLimitReached: z.boolean() })
     .parse(row.original);
   const router = useRouter();
-  const [alertOpen, setAlertOpen] = React.useState(false);
-  const [isPending, startTransition] = React.useTransition();
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   async function onDelete() {
     startTransition(async () => {
@@ -59,23 +58,8 @@ export function DataTableRowActions<TData>({
     });
   }
 
-  async function onToggleActive() {
-    startTransition(async () => {
-      try {
-        // biome-ignore lint/correctness/noUnusedVariables: <explanation>
-        const { jobType, ...rest } = monitor;
-        if (!monitor.id) return;
-        await api.monitor.toggleMonitorActive.mutate({
-          id: monitor.id,
-        });
-        toastAction("success");
-        router.refresh();
-      } catch {
-        toastAction("error");
-      }
-    });
-  }
-
+  // FIXME: the test doenst take the assertions into account!
+  // FIXME: improve (similar to the one in the edit form - also include toast.promise + better error message!)
   async function onTest() {
     startTransition(async () => {
       const { url, body, method, headers } = monitor;
@@ -100,6 +84,42 @@ export function DataTableRowActions<TData>({
       }
     });
   }
+  async function onClone() {
+    startTransition(async () => {
+      try {
+        const id = monitor.id;
+        if (!id) return;
+
+        const selectedMonitorData = await api.monitor.getMonitorById.query({
+          id,
+        });
+
+        const { notificationIds, pageIds, monitorTagIds } =
+          await api.monitor.getMonitorRelationsById.query({ id });
+
+        const cloneMonitorData = {
+          ...selectedMonitorData,
+          name: `${selectedMonitorData.name} - copy`,
+          tags: monitorTagIds,
+          notifications: notificationIds,
+          pages: pageIds,
+          active: false,
+          id: undefined,
+          updatedAt: undefined,
+          createdAt: undefined,
+        };
+
+        // Create a clone function in the api
+        await api.monitor.create.mutate(cloneMonitorData);
+
+        toast.success("Monitor cloned!");
+        router.refresh();
+      } catch (error) {
+        console.log("error", error);
+        toastAction("error");
+      }
+    });
+  }
 
   return (
     <AlertDialog open={alertOpen} onOpenChange={(value) => setAlertOpen(value)}>
@@ -120,11 +140,10 @@ export function DataTableRowActions<TData>({
           <Link href={`./monitors/${monitor.id}/overview`}>
             <DropdownMenuItem>Details</DropdownMenuItem>
           </Link>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={onTest}>Test endpoint</DropdownMenuItem>
-          <DropdownMenuItem onClick={onToggleActive}>
-            {monitor.active ? "Pause" : "Resume"} monitor
+          <DropdownMenuItem onClick={onClone} disabled={isLimitReached}>
+            Clone
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={onTest}>Test</DropdownMenuItem>
           <DropdownMenuSeparator />
           <AlertDialogTrigger asChild>
             <DropdownMenuItem className="text-destructive focus:bg-destructive focus:text-background">

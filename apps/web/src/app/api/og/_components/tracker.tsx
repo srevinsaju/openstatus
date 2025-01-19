@@ -1,9 +1,13 @@
-import type { Monitor } from "@openstatus/tinybird";
 import { Tracker as OSTracker, classNames } from "@openstatus/tracker";
 
+import type { ResponseStatusTracker } from "@/lib/tb";
 import { cn, formatDate } from "@/lib/utils";
 
-export function Tracker({ data }: { data: Monitor[] }) {
+interface TrackerProps {
+  data: ResponseStatusTracker[];
+}
+
+export function Tracker({ data }: TrackerProps) {
   const tracker = new OSTracker({ data });
 
   return (
@@ -23,8 +27,11 @@ export function Tracker({ data }: { data: Monitor[] }) {
               const isBlackListed = Boolean(item.blacklist);
               if (isBlackListed) {
                 return (
-                  // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
-                  <div key={i} tw="h-16 w-3 rounded-full mr-1 bg-green-400" />
+                  <div
+                    // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
+                    key={i}
+                    tw="h-16 w-3 rounded-full mr-1 bg-status-operational/90"
+                  />
                 );
               }
               return (

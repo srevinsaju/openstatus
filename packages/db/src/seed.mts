@@ -1,5 +1,3 @@
-import "dotenv/config";
-
 import { createClient } from "@libsql/client";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
@@ -9,6 +7,7 @@ import {
   incidentTable,
   monitor,
   monitorsToPages,
+  monitorsToStatusReport,
   notification,
   notificationsToMonitors,
   page,
@@ -36,6 +35,8 @@ async function main() {
         plan: "pro",
         endsAt: null,
         paidUntil: null,
+        limits:
+          '{"monitors":50,"synthetic-checks":150000,"periodicity":["30s","1m","5m","10m","30m","1h"],"multi-region":true,"max-regions":35,"data-retention":"24 months","status-pages":20,"maintenance":true,"status-subscribers":true,"custom-domain":true,"password-protection":true,"white-label":true,"notifications":true,"sms":true,"pagerduty":true,"notification-channels":50,"members":"Unlimited","audit-log":true,"regions":["ams","arn","atl","bog","bom","bos","cdg","den","dfw","ewr","eze","fra","gdl","gig","gru","hkg","iad","jnb","lax","lhr","mad","mia","nrt","ord","otp","phx","qro","scl","sea","sin","sjc","syd","waw","yul","yyz"]}',
       },
       {
         id: 2,
@@ -143,6 +144,7 @@ async function main() {
     .values({
       id: 1,
       workspaceId: 1,
+      pageId: 1,
       title: "Test Status Report",
       status: "investigating",
       updatedAt: new Date(),
@@ -155,7 +157,7 @@ async function main() {
       id: 1,
       statusReportId: 1,
       status: "investigating",
-      message: "",
+      message: "Message",
       date: new Date(),
     })
     .run();
@@ -165,6 +167,7 @@ async function main() {
     .values({
       id: 2,
       workspaceId: 1,
+      pageId: 1,
       title: "Test Status Report",
       status: "investigating",
       updatedAt: new Date(),
@@ -177,10 +180,21 @@ async function main() {
       id: 2,
       statusReportId: 2,
       status: "investigating",
-      message: "",
+      message: "Message",
       date: new Date(),
     })
     .run();
+
+  await db.insert(monitorsToStatusReport).values([
+    {
+      monitorId: 1,
+      statusReportId: 2,
+    },
+    {
+      monitorId: 2,
+      statusReportId: 2,
+    },
+  ]);
 
   await db
     .insert(incidentTable)

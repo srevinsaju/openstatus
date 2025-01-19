@@ -1,8 +1,9 @@
 import { z } from "zod";
 
-import { and, eq, schema } from "@openstatus/db";
+import { and, eq, isNull, schema } from "@openstatus/db";
 import { selectIncidentSchema } from "@openstatus/db/src/schema";
 
+import { Events } from "@openstatus/analytics";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 
 export const incidentRouter = createTRPCRouter({
@@ -51,7 +52,21 @@ export const incidentRouter = createTRPCRouter({
       });
     }),
 
+  getOpenIncidents: protectedProcedure.query(async (opts) => {
+    return await opts.ctx.db
+      .select()
+      .from(schema.incidentTable)
+      .where(
+        and(
+          eq(schema.incidentTable.workspaceId, opts.ctx.workspace.id),
+          isNull(schema.incidentTable.resolvedAt),
+        ),
+      )
+      .all();
+  }),
+
   acknowledgeIncident: protectedProcedure
+    .meta({ track: Events.AcknowledgeIncident })
     .input(z.object({ id: z.number() }))
     .mutation(async (opts) => {
       const currentIncident = await opts.ctx.db
@@ -85,6 +100,7 @@ export const incidentRouter = createTRPCRouter({
       return true;
     }),
   resolvedIncident: protectedProcedure
+    .meta({ track: Events.ResolveIncident })
     .input(z.object({ id: z.number() }))
     .mutation(async (opts) => {
       const currentIncident = await opts.ctx.db
@@ -122,6 +138,7 @@ export const incidentRouter = createTRPCRouter({
     }),
 
   delete: protectedProcedure
+    .meta({ track: Events.DeleteIncident })
     .input(z.object({ id: z.number() }))
     .mutation(async (opts) => {
       const incidentToDelete = await opts.ctx.db

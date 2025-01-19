@@ -1,13 +1,11 @@
-import { createTRPCProxyClient, loggerLink } from "@trpc/client";
+import { createTRPCClient, loggerLink } from "@trpc/client";
 import { headers } from "next/headers";
-import superjson from "superjson";
 
 import type { AppRouter } from "@openstatus/api";
 
 import { endingLink } from "./shared";
 
-export const api = createTRPCProxyClient<AppRouter>({
-  transformer: superjson,
+export const api = createTRPCClient<AppRouter>({
   links: [
     loggerLink({
       enabled: (opts) =>
@@ -15,8 +13,8 @@ export const api = createTRPCProxyClient<AppRouter>({
         (opts.direction === "down" && opts.result instanceof Error),
     }),
     endingLink({
-      headers: () => {
-        const h = new Map(headers());
+      headers: async () => {
+        const h = new Map(await headers());
         h.delete("connection");
         h.delete("transfer-encoding");
         h.set("x-trpc-source", "server");

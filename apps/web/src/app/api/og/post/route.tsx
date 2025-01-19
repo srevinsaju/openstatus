@@ -22,9 +22,9 @@ export async function GET(req: Request) {
 
   const title =
     (searchParams.has("title") && searchParams.get("title")) || TITLE;
-  const description =
-    (searchParams.has("description") && searchParams.get("description")) ||
-    DESCRIPTION;
+  const description = searchParams.has("description")
+    ? searchParams.get("description")
+    : undefined;
   const image = searchParams.has("image")
     ? searchParams.get("image")
     : undefined;
@@ -34,7 +34,7 @@ export async function GET(req: Request) {
       {image ? (
         <img
           alt=""
-          style={{ objectFit: "cover", height: 350 }} // h-80 = 320px
+          style={{ objectFit: "cover", height: 330 }} // h-80 = 320px
           tw="flex w-full"
           src={new URL(image, DEFAULT_URL).toString()}
         />

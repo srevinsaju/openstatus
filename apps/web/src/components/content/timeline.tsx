@@ -35,7 +35,7 @@ export function Timeline({
 
 interface ArticleProps {
   href: string;
-  publishedAt: string;
+  publishedAt: Date;
   imageSrc: string;
   title: string;
   children?: React.ReactNode;
@@ -51,19 +51,19 @@ function Article({
   return (
     <article className="grid grid-cols-1 gap-4 md:grid-cols-5 md:gap-6">
       <div className="relative row-span-2">
-        <div className="sticky top-2">
+        <div className="sticky top-20">
           <time className="order-2 font-mono text-muted-foreground text-sm md:order-1 md:col-span-1">
-            {formatDate(new Date(publishedAt))}
+            {formatDate(publishedAt)}
           </time>
         </div>
       </div>
-      <div className="relative order-1 h-64 w-full md:order-2 md:col-span-4">
+      <div className="relative order-1 aspect-video w-full overflow-hidden rounded-md border border-border md:order-2 md:col-span-4">
         <Link href={href}>
           <Image
             src={imageSrc}
             fill={true}
             alt={title}
-            className="rounded-md border border-border object-cover"
+            className="object-cover"
           />
         </Link>
       </div>

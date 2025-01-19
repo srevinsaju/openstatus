@@ -1,52 +1,22 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { z } from "zod";
 
-import { OSTinybird } from "@openstatus/tinybird";
-import { Button } from "@openstatus/ui";
+import { Button } from "@openstatus/ui/src/components/button";
 
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { Limit } from "@/components/dashboard/limit";
 import { columns } from "@/components/data-table/monitor/columns";
 import { DataTable } from "@/components/data-table/monitor/data-table";
-import { env } from "@/env";
+import { prepareMetricsByPeriod, prepareStatusByPeriod } from "@/lib/tb";
 import { api } from "@/trpc/server";
+import { searchParamsCache } from "./search-params";
 
-const tb = new OSTinybird({ token: env.TINY_BIRD_API_KEY });
-
-export const dynamic = "force-dynamic";
-
-/**
- * allowed URL search params
- */
-const searchParamsSchema = z.object({
-  tags: z
-    .string()
-    .transform((v) => v?.split(","))
-    .optional(),
-  public: z
-    .string()
-    .transform((v) =>
-      v?.split(",").map((v) => {
-        if (v === "true") return true;
-        if (v === "false") return false;
-        return undefined;
-      }),
-    )
-    .optional(),
-});
-
-export default async function MonitorPage({
-  searchParams,
-}: {
-  searchParams: { [key: string]: string | string[] | undefined };
+export default async function MonitorPage(props: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const search = searchParamsSchema.safeParse(searchParams);
+  const searchParams = await props.searchParams;
+  const search = searchParamsCache.parse(searchParams);
+
   const monitors = await api.monitor.getMonitorsByWorkspace.query();
-  const isLimitReached = await api.monitor.isMonitorLimitReached.query();
-
-  if (!search.success) return notFound();
-
   if (monitors?.length === 0)
     return (
       <EmptyState
@@ -61,28 +31,28 @@ export default async function MonitorPage({
       />
     );
 
-  const _incidents = await api.incident.getIncidentsByWorkspace.query();
-  const tags = await api.monitorTag.getMonitorTagsByWorkspace.query();
+  const [_incidents, tags, _maintenances, isLimitReached] = await Promise.all([
+    api.incident.getIncidentsByWorkspace.query(),
+    api.monitorTag.getMonitorTagsByWorkspace.query(),
+    api.maintenance.getLast7DaysByWorkspace.query(),
+    api.monitor.isMonitorLimitReached.query(),
+  ]);
 
   // maybe not very efficient?
   // use Suspense and Client call instead?
   const monitorsWithData = await Promise.all(
     monitors.map(async (monitor) => {
-      const metrics = await tb.endpointMetrics("1d")(
-        {
+      const type = monitor.jobType as "http" | "tcp";
+      const [metrics, data] = await Promise.all([
+        prepareMetricsByPeriod("1d", type).getData({
           monitorId: String(monitor.id),
-        },
-        { cache: "no-store", revalidate: 0 },
-      );
-
-      const data = await tb.endpointStatusPeriod("7d")(
-        {
+        }),
+        prepareStatusByPeriod("7d", type).getData({
           monitorId: String(monitor.id),
-        },
-        { cache: "no-store", revalidate: 0 },
-      );
+        }),
+      ]);
 
-      const [current] = metrics?.sort((a, b) =>
+      const [current] = metrics.data?.sort((a, b) =>
         (a.lastTimestamp || 0) - (b.lastTimestamp || 0) < 0 ? 1 : -1,
       ) || [undefined];
 
@@ -94,7 +64,19 @@ export default async function MonitorPage({
         ({ monitorTag }) => monitorTag,
       );
 
-      return { monitor, metrics: current, data, incidents, tags };
+      const maintenances = _maintenances.filter((maintenance) =>
+        maintenance.monitors.includes(monitor.id),
+      );
+
+      return {
+        monitor,
+        metrics: current,
+        data: data.data,
+        incidents,
+        maintenances,
+        tags,
+        isLimitReached,
+      };
     }),
   );
 
@@ -102,12 +84,16 @@ export default async function MonitorPage({
     <>
       <DataTable
         defaultColumnFilters={[
-          { id: "tags", value: search.data.tags },
-          { id: "public", value: search.data.public },
-        ].filter((v) => v.value !== undefined)}
+          { id: "tags", value: search.tags },
+          { id: "public", value: search.public },
+        ].filter((v) => v.value !== null)}
         columns={columns}
         data={monitorsWithData}
         tags={tags}
+        defaultPagination={{
+          pageIndex: search.pageIndex,
+          pageSize: search.pageSize,
+        }}
       />
       {isLimitReached ? <Limit /> : null}
     </>

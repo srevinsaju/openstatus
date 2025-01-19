@@ -1,6 +1,8 @@
 package request
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 type AssertionType string
 
@@ -43,24 +45,50 @@ type Assertion struct {
 	RawTarget     json.RawMessage `json:"target"`
 }
 
-type CheckerRequest struct {
-	WorkspaceID   string `json:"workspaceId"`
-	URL           string `json:"url"`
-	MonitorID     string `json:"monitorId"`
-	Method        string `json:"method"`
-	CronTimestamp int64  `json:"cronTimestamp"`
-	Body          string `json:"body"`
-	Headers       []struct {
+type HttpCheckerRequest struct {
+	Headers []struct {
 		Key   string `json:"key"`
 		Value string `json:"value"`
 	} `json:"headers,omitempty"`
+	WorkspaceID   string            `json:"workspaceId"`
+	URL           string            `json:"url"`
+	MonitorID     string            `json:"monitorId"`
+	Method        string            `json:"method"`
 	Status        string            `json:"status"`
+	Body          string            `json:"body"`
+	Trigger       string            `json:"trigger,omitempty"`
 	RawAssertions []json.RawMessage `json:"assertions,omitempty"`
+	CronTimestamp int64             `json:"cronTimestamp"`
+	Timeout       int64             `json:"timeout"`
+	DegradedAfter int64             `json:"degradedAfter,omitempty"`
+}
+
+type TCPCheckerRequest struct {
+	Status        string            `json:"status"`
+	WorkspaceID   string            `json:"workspaceId"`
+	URI           string            `json:"uri"`
+	MonitorID     string            `json:"monitorId"`
+	Trigger       string            `json:"trigger,omitempty"`
+	RawAssertions []json.RawMessage `json:"assertions,omitempty"`
+	RequestId     int64             `json:"requestId,omitempty"`
+	CronTimestamp int64             `json:"cronTimestamp"`
+	Timeout       int64             `json:"timeout"`
+	DegradedAfter int64             `json:"degradedAfter,omitempty"`
+}
+
+type TCPRequest struct {
+	WorkspaceID   string `json:"workspaceId"`
+	URL           string `json:"url"`
+	MonitorID     string `json:"monitorId"`
+	CronTimestamp int64  `json:"cronTimestamp"`
+	Timeout       int64  `json:"timeout"`
 }
 
 type PingRequest struct {
-	URL     string            `json:"url"`
-	Method  string            `json:"method"`
-	Body    string            `json:"body"`
-	Headers map[string]string `json:"headers"`
+	Headers     map[string]string `json:"headers"`
+	URL         string            `json:"url"`
+	Method      string            `json:"method"`
+	Body        string            `json:"body"`
+	RequestId   int64             `json:"requestId"`
+	WorkspaceId int64             `json:"workspaceId"`
 }

@@ -1,21 +1,26 @@
-const { withContentlayer } = require("next-contentlayer");
+const { withContentCollections } = require("@content-collections/next");
+const { withSentryConfig } = require("@sentry/nextjs");
+
+// REMINDER: avoid Clickjacking attacks by setting the X-Frame-Options header
+const securityHeaders = [
+  {
+    key: "X-Frame-Options",
+    value: "SAMEORIGIN",
+  },
+];
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  swcMinify: true,
   transpilePackages: ["@openstatus/ui", "@openstatus/api"],
-  experimental: {
-    serverComponentsExternalPackages: [
-      "libsql",
-      "@react-email/components",
-      "@react-email/render",
-      "@google-cloud/tasks",
-      // "@libsql/client",
-      // "better-sqlite3"
+  outputFileTracingIncludes: {
+    "/": [
+      "./node_modules/.pnpm/@google-cloud/tasks/build/esm/src/**/*.json",
+      "./node_modules/@google-cloud/tasks/build/esm/src/**/*.js",
     ],
-    optimizePackageImports: ["@tremor/react"],
   },
+  serverExternalPackages: ["@google-cloud/tasks"],
+  expireTime: 180, // 3 minutes
   logging: {
     fetches: {
       fullUrl: true,
@@ -31,16 +36,35 @@ const nextConfig = {
         protocol: "https",
         hostname: "screenshot.openstat.us",
       },
+      {
+        protocol: "https",
+        hostname: "www.openstatus.dev",
+      },
     ],
+  },
+  async headers() {
+    return [{ source: "/(.*)", headers: securityHeaders }];
+  },
+  async rewrites() {
+    return {
+      beforeFiles: [
+        {
+          source: "/:path*",
+          has: [
+            {
+              type: "host",
+              value: "app.openstatus.dev",
+            },
+          ],
+          destination: "/app/:path*",
+        },
+      ],
+    };
   },
 };
 
-// Injected content via Sentry wizard below
-
-const { withSentryConfig } = require("@sentry/nextjs");
-
 module.exports = withSentryConfig(
-  withContentlayer(nextConfig),
+  async () => await withContentCollections(nextConfig),
   {
     // For all available options, see:
     // https://github.com/getsentry/sentry-webpack-plugin#options

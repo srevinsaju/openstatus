@@ -1,4 +1,4 @@
-import { allChangelogs } from "contentlayer/generated";
+import { allChangelogs } from "content-collections";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
@@ -22,17 +22,20 @@ export async function generateStaticParams() {
   }));
 }
 
-export async function generateMetadata({
-  params,
-}: {
-  params: { slug: string };
+export async function generateMetadata(props: {
+  params: Promise<{ slug: string }>;
 }): Promise<Metadata | undefined> {
+  const params = await props.params;
   const post = allChangelogs.find((post) => post.slug === params.slug);
   if (!post) {
     return;
   }
 
-  const { title, publishedAt: publishedTime, description, slug, image } = post;
+  const { title, publishedAt, description, slug, image } = post;
+
+  const encodedTitle = encodeURIComponent(title);
+  const encodedDescription = encodeURIComponent(description);
+  const encodedImage = encodeURIComponent(image);
 
   return {
     ...defaultMetadata,
@@ -43,11 +46,11 @@ export async function generateMetadata({
       title,
       description,
       type: "article",
-      publishedTime,
+      publishedTime: publishedAt.toISOString(),
       url: `https://www.openstatus.dev/changelog/${slug}`,
       images: [
         {
-          url: `https://openstatus.dev/api/og/post?title=${title}&description=${description}&image=${image}`,
+          url: `https://openstatus.dev/api/og/post?title=${encodedTitle}&description=${encodedDescription}&image=${encodedImage}`,
         },
       ],
     },
@@ -56,7 +59,7 @@ export async function generateMetadata({
       title,
       description,
       images: [
-        `https://openstatus.dev/api/og/post?title=${title}&description=${description}&image=${image}`,
+        `https://openstatus.dev/api/og/post?title=${encodedTitle}&description=${encodedDescription}&image=${encodedImage}`,
       ],
     },
   };
@@ -76,11 +79,10 @@ function getChangelogPagination(slug: string) {
   };
 }
 
-export default function ChangelogPage({
-  params,
-}: {
-  params: { slug: string };
+export default async function ChangelogPage(props: {
+  params: Promise<{ slug: string }>;
 }) {
+  const params = await props.params;
   const post = allChangelogs.find((post) => post.slug === params.slug);
 
   if (!post) {
@@ -92,10 +94,10 @@ export default function ChangelogPage({
   return (
     <>
       <BackButton href="/changelog" />
-      <Shell className="flex flex-col gap-8 md:gap-12 md:py-12 sm:py-8">
+      <Shell className="flex flex-col gap-8 sm:py-8 md:gap-12 md:py-12">
         <ChangelogCard post={post} />
         <Separator className="mx-auto max-w-prose" />
-        <Pagination {...{ next, prev }} />
+        <Pagination {...{ prev, next }} />
       </Shell>
     </>
   );

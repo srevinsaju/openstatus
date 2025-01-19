@@ -8,16 +8,8 @@ import type {
   Notification,
   WorkspacePlan,
 } from "@openstatus/db/src/schema";
-import { getLimit } from "@openstatus/plans";
 import {
   Badge,
-  Button,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
   FormControl,
   FormDescription,
   FormField,
@@ -26,22 +18,14 @@ import {
   FormMessage,
 } from "@openstatus/ui";
 
-import { NotificationForm } from "../notification-form";
 import { CheckboxLabel } from "../shared/checkbox-label";
 
 interface Props {
   form: UseFormReturn<InsertMonitor>;
-  plan: WorkspacePlan;
   notifications?: Notification[];
 }
 
-export function SectionNotifications({ form, plan, notifications }: Props) {
-  const [openDialog, setOpenDialog] = React.useState(false);
-
-  const notificationLimit = getLimit(plan, "notification-channels");
-  const notificationLimitReached = notifications
-    ? notifications.length >= notificationLimit
-    : false;
+export function SectionNotifications({ form, notifications }: Props) {
   return (
     <div className="grid w-full gap-4">
       {/* <div className="grid gap-1">
@@ -64,7 +48,7 @@ export function SectionNotifications({ form, plan, notifications }: Props) {
                   Select the notification channels you want to be informed.
                 </FormDescription>
               </div>
-              <div className="grid grid-cols-1 grid-rows-1 gap-4 md:grid-cols-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 grid-rows-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
                 {notifications?.map((item) => (
                   <FormField
                     key={item.id}
@@ -86,8 +70,8 @@ export function SectionNotifications({ form, plan, notifications }: Props) {
                                     ])
                                   : field.onChange(
                                       field.value?.filter(
-                                        (value) => value !== item.id
-                                      )
+                                        (value) => value !== item.id,
+                                      ),
                                     );
                               }}
                             >
@@ -106,34 +90,15 @@ export function SectionNotifications({ form, plan, notifications }: Props) {
                 ))}
               </div>
               {!notifications || notifications.length === 0 ? (
-                <FormDescription>Missing notifications.</FormDescription>
+                <FormDescription>
+                  Create some notifications first.
+                </FormDescription>
               ) : null}
               <FormMessage />
             </FormItem>
           );
         }}
       />
-      <Dialog open={openDialog} onOpenChange={(val) => setOpenDialog(val)}>
-        <div>
-          <DialogTrigger asChild>
-            <Button variant="outline" disabled={notificationLimitReached}>
-              Add Notification Channel
-            </Button>
-          </DialogTrigger>
-        </div>
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Add Notification</DialogTitle>
-            <DialogDescription>
-              Get alerted when your endpoint is down.
-            </DialogDescription>
-          </DialogHeader>
-          <NotificationForm
-            onSubmit={() => setOpenDialog(false)}
-            workspacePlan={plan}
-          />
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

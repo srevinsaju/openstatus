@@ -3,6 +3,8 @@
 import type {
   ColumnDef,
   ColumnFiltersState,
+  PaginationState,
+  SortingState,
   Table as TTable,
   VisibilityState,
 } from "@tanstack/react-table";
@@ -10,7 +12,10 @@ import {
   flexRender,
   getCoreRowModel,
   getFacetedRowModel,
+  getFacetedUniqueValues,
   getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import * as React from "react";
@@ -27,6 +32,8 @@ import {
   TableRow,
 } from "@openstatus/ui";
 
+import { DataTableFloatingActions } from "./data-table-floating-actions";
+import { DataTablePagination } from "./data-table-pagination";
 import { DataTableToolbar } from "./data-table-toolbar";
 
 interface DataTableProps<TData, TValue> {
@@ -34,6 +41,7 @@ interface DataTableProps<TData, TValue> {
   data: TData[];
   tags?: MonitorTag[];
   defaultColumnFilters?: ColumnFiltersState;
+  defaultPagination?: PaginationState;
 }
 
 export function DataTable<TData, TValue>({
@@ -41,13 +49,20 @@ export function DataTable<TData, TValue>({
   data,
   tags,
   defaultColumnFilters = [],
+  defaultPagination = { pageIndex: 0, pageSize: 10 },
 }: DataTableProps<TData, TValue>) {
+  const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] =
     React.useState<ColumnFiltersState>(defaultColumnFilters);
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({
-      public: false, // default is true
+      public: false,
+      id: false,
+      jobType: false,
     });
+
+  const [pagination, setPagination] =
+    React.useState<PaginationState>(defaultPagination);
 
   const table = useReactTable({
     data,
@@ -55,17 +70,23 @@ export function DataTable<TData, TValue>({
     state: {
       columnFilters,
       columnVisibility,
+      pagination,
+      sorting,
     },
+    onPaginationChange: setPagination,
+    getPaginationRowModel: getPaginationRowModel(),
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
     getFilteredRowModel: getFilteredRowModel(),
     getCoreRowModel: getCoreRowModel(),
+    onSortingChange: setSorting,
+    getSortedRowModel: getSortedRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     // TODO: check if we can optimize it - because it gets bigger and bigger with every new filter
     // getFacetedUniqueValues: getFacetedUniqueValues(),
     // REMINDER: We cannot use the default getFacetedUniqueValues as it doesnt support Array of Objects
     getFacetedUniqueValues: (_table: TTable<TData>, columnId: string) => () => {
-      const map = new Map();
+      const map = getFacetedUniqueValues<TData>()(_table, columnId)();
       if (columnId === "tags") {
         if (tags) {
           for (const tag of tags) {
@@ -82,14 +103,6 @@ export function DataTable<TData, TValue>({
           }
         }
       }
-      if (columnId === "public") {
-        const values = table
-          .getCoreRowModel()
-          .flatRows.map((row) => row.getValue(columnId)) as boolean[];
-        const publicValue = values.filter((v) => v === true).length;
-        map.set(true, publicValue);
-        map.set(false, values.length - publicValue);
-      }
       return map;
     },
   });
@@ -104,7 +117,11 @@ export function DataTable<TData, TValue>({
               <TableRow key={headerGroup.id} className="hover:bg-transparent">
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id}>
+                    // FIXME: className="[&:has(svg)]:w-4" takes the svg of the button > checkbox  into account
+                    <TableHead
+                      key={header.id}
+                      className={header.column.columnDef.meta?.headerClassName}
+                    >
                       {header.isPlaceholder
                         ? null
                         : flexRender(
@@ -125,7 +142,10 @@ export function DataTable<TData, TValue>({
                   data-state={row.getIsSelected() && "selected"}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                    <TableCell
+                      key={cell.id}
+                      className={cell.column.columnDef.meta?.cellClassName}
+                    >
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext(),
@@ -147,6 +167,8 @@ export function DataTable<TData, TValue>({
           </TableBody>
         </Table>
       </div>
+      <DataTablePagination table={table} />
+      <DataTableFloatingActions table={table} tags={tags} />
     </div>
   );
 }

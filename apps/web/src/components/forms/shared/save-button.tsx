@@ -1,6 +1,6 @@
 import React from "react";
 
-import { Button } from "@openstatus/ui";
+import { Button } from "@openstatus/ui/src/components/button";
 
 import { Kbd } from "../../kbd";
 import { LoadingAnimation } from "../../loading-animation";
@@ -40,10 +40,10 @@ export function SaveButton({ isPending, isDirty, onSubmit, form }: Props) {
           form={form}
         >
           {!isPending ? (
-            <span className="flex gap-2">
+            <span className="flex items-center gap-2">
               Confirm
               <Kbd>
-                <span>⌘</span>
+                <span className="mr-0.5">⌘</span>
                 <span>S</span>
               </Kbd>
             </span>

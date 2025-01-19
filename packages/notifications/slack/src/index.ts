@@ -1,4 +1,5 @@
 import type { Monitor, Notification } from "@openstatus/db/src/schema";
+import { DataSchema } from "./schema";
 
 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
 const postToWebhook = async (body: any, webhookUrl: string) => {
@@ -18,13 +19,18 @@ export const sendAlert = async ({
   notification,
   statusCode,
   message,
+  // biome-ignore lint/correctness/noUnusedVariables: <explanation>
+  incidentId,
+  cronTimestamp,
 }: {
   monitor: Monitor;
   notification: Notification;
   statusCode?: number;
   message?: string;
+  incidentId?: string;
+  cronTimestamp: number;
 }) => {
-  const notificationData = JSON.parse(notification.data);
+  const notificationData = DataSchema.parse(JSON.parse(notification.data));
   const { slack: webhookUrl } = notificationData; // webhook url
   const { name } = monitor;
 
@@ -33,25 +39,28 @@ export const sendAlert = async ({
       {
         blocks: [
           {
+            type: "divider",
+          },
+          {
             type: "section",
             text: {
               type: "mrkdwn",
-              text: `Your monitor <${monitor.url}/|${name}> with ${
-                statusCode
-                  ? `status code ${statusCode}`
-                  : `error message ${message}`
-              } 🚨  \n\n Powered by <https://www.openstatus.dev/|OpenStatus>.`,
+              text: `
+*🚨 Alert <${monitor.url}/|${name}>*\n\n
+Status Code: ${statusCode || "_empty_"}\n
+Message: ${message || "_empty_"}\n
+Cron Timestamp: ${cronTimestamp} (${new Date(cronTimestamp).toISOString()})
+`,
             },
-            accessory: {
-              type: "button",
-              text: {
-                type: "plain_text",
-                text: "Open Monitor",
-                emoji: true,
+          },
+          {
+            type: "context",
+            elements: [
+              {
+                type: "mrkdwn",
+                text: "Check your <https://www.openstatus.dev/app|Dashboard>.",
               },
-              value: `monitor_url_${monitor.url}`,
-              url: monitor.url,
-            },
+            ],
           },
         ],
       },
@@ -70,13 +79,17 @@ export const sendRecovery = async ({
   statusCode,
   // biome-ignore lint/correctness/noUnusedVariables: <explanation>
   message,
+  // biome-ignore lint/correctness/noUnusedVariables: <explanation>
+  incidentId,
 }: {
   monitor: Monitor;
   notification: Notification;
   statusCode?: number;
   message?: string;
+  incidentId?: string;
+  cronTimestamp: number;
 }) => {
-  const notificationData = JSON.parse(notification.data);
+  const notificationData = DataSchema.parse(JSON.parse(notification.data));
   const { slack: webhookUrl } = notificationData; // webhook url
   const { name } = monitor;
 
@@ -85,22 +98,74 @@ export const sendRecovery = async ({
       {
         blocks: [
           {
+            type: "divider",
+          },
+          {
             type: "section",
             text: {
               type: "mrkdwn",
-              text: `Your monitor <${monitor.url}/|${name}> is up again
-              🚀  \n\n Powered by <https://www.openstatus.dev/|OpenStatus>.`,
+              text: `*✅ Recovered <${monitor.url}/|${name}>*`,
             },
-            accessory: {
-              type: "button",
-              text: {
-                type: "plain_text",
-                text: "Open Monitor",
-                emoji: true,
+          },
+          {
+            type: "context",
+            elements: [
+              {
+                type: "mrkdwn",
+                text: "Check your <https://www.openstatus.dev/app|Dashboard>.",
               },
-              value: `monitor_url_${monitor.url}`,
-              url: monitor.url,
+            ],
+          },
+        ],
+      },
+      webhookUrl,
+    );
+  } catch (err) {
+    console.log(err);
+    // Do something
+  }
+};
+
+export const sendDegraded = async ({
+  monitor,
+  notification,
+  // biome-ignore lint/correctness/noUnusedVariables: <explanation>
+  statusCode,
+  // biome-ignore lint/correctness/noUnusedVariables: <explanation>
+  message,
+}: {
+  monitor: Monitor;
+  notification: Notification;
+  statusCode?: number;
+  message?: string;
+  cronTimestamp: number;
+}) => {
+  const notificationData = DataSchema.parse(JSON.parse(notification.data));
+  const { slack: webhookUrl } = notificationData; // webhook url
+  const { name } = monitor;
+
+  try {
+    await postToWebhook(
+      {
+        blocks: [
+          {
+            type: "divider",
+          },
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: `*⚠️ Degraded <${monitor.url}/|${name}>*`,
             },
+          },
+          {
+            type: "context",
+            elements: [
+              {
+                type: "mrkdwn",
+                text: "Check your <https://www.openstatus.dev/app|Dashboard>.",
+              },
+            ],
           },
         ],
       },
@@ -118,11 +183,23 @@ export const sendTestSlackMessage = async (webhookUrl: string) => {
       {
         blocks: [
           {
+            type: "divider",
+          },
+          {
             type: "section",
             text: {
               type: "mrkdwn",
-              text: "This is a test notification from <https://www.openstatus.dev/|OpenStatus>.\n If you can read this, your Slack webhook is functioning correctly!",
+              text: "*🧪 Test <https://www.openstatus.dev/|OpenStatus>*\n\nIf you can read this, your Slack webhook is functioning correctly!",
             },
+          },
+          {
+            type: "context",
+            elements: [
+              {
+                type: "mrkdwn",
+                text: "Check your <https://www.openstatus.dev/app|Dashboard>.",
+              },
+            ],
           },
         ],
       },

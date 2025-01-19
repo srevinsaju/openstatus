@@ -6,13 +6,13 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@openstatus/ui";
-import { usePathname, useRouter } from "next/navigation";
+} from "@openstatus/ui/src/components/select";
 import type { ReactNode } from "react";
 
 import { Icons } from "@/components/icons";
 import type { ValidIcon } from "@/components/icons";
-import useUpdateSearchParams from "@/hooks/use-update-search-params";
+import { cn } from "@/lib/utils";
+import { useQueryState } from "nuqs";
 
 export function SearchParamsPreset<T extends string>({
   disabled,
@@ -22,33 +22,31 @@ export function SearchParamsPreset<T extends string>({
   icon,
   placeholder,
   formatter,
+  className,
 }: {
   disabled?: boolean;
   defaultValue?: T;
-  values: readonly T[];
+  values: readonly T[] | T[];
   searchParam: string;
   icon?: ValidIcon;
   placeholder?: string;
   formatter?(value: T): ReactNode;
+  className?: string;
 }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const updateSearchParams = useUpdateSearchParams();
-
-  function onSelect(value: T) {
-    const searchParams = updateSearchParams({ [searchParam]: value });
-    router.replace(`${pathname}?${searchParams}`, { scroll: false });
-  }
+  const [value, setValue] = useQueryState(searchParam, { shallow: false });
 
   const Icon = icon ? Icons[icon] : undefined;
 
   return (
     <Select
       defaultValue={defaultValue}
-      onValueChange={onSelect}
+      value={value || defaultValue}
+      onValueChange={setValue}
       disabled={disabled}
     >
-      <SelectTrigger className="w-[150px] bg-background text-left">
+      <SelectTrigger
+        className={cn("w-[150px] bg-background text-left", className)}
+      >
         <span className="flex items-center gap-2">
           {Icon ? <Icon className="h-4 w-4" /> : null}
           <SelectValue placeholder={placeholder} />

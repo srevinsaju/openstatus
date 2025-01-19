@@ -1,11 +1,11 @@
 import type { DefaultSession } from "next-auth";
 import NextAuth from "next-auth";
 
-import { analytics, trackAnalytics } from "@openstatus/analytics";
+import { Events, setupAnalytics } from "@openstatus/analytics";
 import { db, eq } from "@openstatus/db";
 import { user } from "@openstatus/db/src/schema";
-import { WelcomeEmail, sendEmail } from "@openstatus/emails";
 
+import { WelcomeEmail, sendEmail } from "@openstatus/emails";
 import { adapter } from "./adapter";
 import { GitHubProvider, GoogleProvider, ResendProvider } from "./providers";
 
@@ -34,6 +34,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             photoUrl: params.profile.picture,
             // keep the name in sync
             name: `${params.profile.given_name} ${params.profile.family_name}`,
+            updatedAt: new Date(),
           })
           .where(eq(user.id, Number(params.user.id)))
           .run();
@@ -47,7 +48,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           .set({
             name: params.profile.name,
             photoUrl: String(params.profile.avatar_url),
+            updatedAt: new Date(),
           })
+          .where(eq(user.id, Number(params.user.id)))
+          .run();
+      }
+
+      // REMINDER: only used in dev mode
+      if (params.account?.provider === "resend") {
+        if (Number.isNaN(Number(params.user.id))) return true;
+        await db
+          .update(user)
+          .set({ updatedAt: new Date() })
           .where(eq(user.id, Number(params.user.id)))
           .run();
       }
@@ -70,34 +82,34 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
       await sendEmail({
         from: "Thibault Le Ouay Ducasse <thibault@openstatus.dev>",
-        subject: "Level up your website and API monitoring.",
+        subject: "Welcome to OpenStatus.",
         to: [params.user.email],
         react: WelcomeEmail(),
       });
 
-      const { id: userId, email } = params.user;
+      const analytics = await setupAnalytics({
+        userId: `usr_${params.user.id}`,
+        email: params.user.email,
+      });
 
-      if (process.env.NODE_ENV !== "development") {
-        await analytics.identify(userId, { email, userId });
-        await trackAnalytics({ event: "User Created", userId, email });
-      }
+      await analytics.track(Events.CreateUser);
     },
 
     async signIn(params) {
       if (params.isNewUser) return;
       if (!params.user.id || !params.user.email) return;
 
-      const { id: userId, email } = params.user;
+      const analytics = await setupAnalytics({
+        userId: `usr_${params.user.id}`,
+        email: params.user.email,
+      });
 
-      if (process.env.NODE_ENV !== "development") {
-        await analytics.identify(userId, { userId, email });
-        await trackAnalytics({ event: "User Signed In" });
-      }
+      await analytics.track(Events.SignInUser);
     },
   },
   pages: {
     signIn: "/app/login",
-    // newUser: "/app/onboarding", // TODO: rethink this as we still have the `slug` to use
+    newUser: "/app/onboarding",
   },
   // basePath: "/api/auth", // default is `/api/auth`
   // secret: process.env.AUTH_SECRET, // default is `AUTH_SECRET`

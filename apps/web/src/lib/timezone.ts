@@ -1,8 +1,8 @@
 import { format, getTimezoneOffset, utcToZonedTime } from "date-fns-tz";
 import { headers } from "next/headers";
 
-export function getRequestHeaderTimezone() {
-  const headersList = headers();
+export async function getRequestHeaderTimezone() {
+  const headersList = await headers();
 
   /**
    * Vercel includes ip timezone to request header
@@ -12,8 +12,8 @@ export function getRequestHeaderTimezone() {
   return requestTimezone;
 }
 
-export function convertTimezoneToGMT(defaultTimezone?: string) {
-  const requestTimezone = getRequestHeaderTimezone();
+export async function convertTimezoneToGMT(defaultTimezone?: string) {
+  const requestTimezone = await getRequestHeaderTimezone();
 
   /**
    * Server region timezone as fallback
@@ -34,8 +34,27 @@ export function convertTimezoneToGMT(defaultTimezone?: string) {
   return `Etc/GMT${offset}` as const;
 }
 
+export function getServerTimezoneUTCFormat() {
+  const now = new Date();
+  const now_utc = new Date(now.toUTCString().slice(0, -4)); // remove the GMT end
+
+  return format(now_utc, "LLL dd, y HH:mm:ss (z)", { timeZone: "UTC" });
+}
+
 export function getServerTimezoneFormat() {
-  return format(new Date(), "LLL dd, y HH:mm:ss zzz", { timeZone: "UTC" });
+  return format(new Date(), "LLL dd, y HH:mm:ss (z)");
+}
+
+export function formatDate(date: Date) {
+  return format(date, "LLL dd, y", { timeZone: "UTC" });
+}
+
+export function formatDateTime(date: Date) {
+  return format(date, "LLL dd, y HH:mm:ss zzz", { timeZone: "UTC" });
+}
+
+export function formatTime(date: Date) {
+  return format(date, "HH:mm:ss zzz", { timeZone: "UTC" });
 }
 
 /**
@@ -43,8 +62,8 @@ export function getServerTimezoneFormat() {
  */
 export const supportedTimezones = Intl.supportedValuesOf("timeZone");
 
-export function getClosestTimezone(defaultTimezone?: string) {
-  const requestTimezone = getRequestHeaderTimezone();
+export async function getClosestTimezone(defaultTimezone?: string) {
+  const requestTimezone = await getRequestHeaderTimezone();
 
   /**
    * Server region timezone as fallback

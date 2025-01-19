@@ -11,23 +11,30 @@ import { ResponseHeaderTable } from "./response-header-table";
 import { ResponseTimingTable } from "./response-timing-table";
 import type { Timing } from "./utils";
 
-export async function ResponseDetailTabs({
+export function ResponseDetailTabs({
   timing,
   headers,
   status,
   message,
   assertions,
+  defaultOpen,
+  hideInfo = true,
+  className,
 }: {
   timing: Timing | null;
   headers: Record<string, string> | null;
   status: number | null;
   message?: string | null;
   assertions?: Assertion[] | null;
+  defaultOpen?: string;
+  hideInfo?: boolean;
+  className?: string;
 }) {
-  const defaultValue = headers ? "headers" : timing ? "timing" : "message";
+  const defaultValue =
+    defaultOpen || headers ? "headers" : timing ? "timing" : "message";
   return (
-    <Tabs defaultValue={defaultValue}>
-      <TabsList>
+    <Tabs defaultValue={defaultValue} className={className}>
+      <TabsList className="sticky top-0 bg-background">
         <TabsTrigger value="headers" disabled={!headers}>
           Headers
         </TabsTrigger>
@@ -50,15 +57,15 @@ export async function ResponseDetailTabs({
         ) : null}
       </TabsContent>
       <TabsContent value="timing">
-        {/* TODO: show hideInfo={false} when in /play/checker page */}
-        {timing ? <ResponseTimingTable timing={timing} hideInfo /> : null}
+        {timing ? (
+          <ResponseTimingTable timing={timing} hideInfo={hideInfo} />
+        ) : null}
       </TabsContent>
       <TabsContent value="message">
         {message ? (
           <div>
             <pre
               className="text-wrap rounded-md bg-muted p-4 text-sm"
-              // @ts-expect-error some issues with types
               style={{ textWrap: "wrap" }}
             >
               {message}

@@ -3,29 +3,29 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@openstatus/ui";
+} from "@openstatus/ui/src/components/tooltip";
 
 import type { StatusDotProps } from "./status-dot";
 import { StatusDot } from "./status-dot";
 
 export interface StatusDotWithTooltipProps extends StatusDotProps {}
 
-export function StatusDotWithTooltip({
-  status,
-  active,
-}: StatusDotWithTooltipProps) {
+export function StatusDotWithTooltip(props: StatusDotWithTooltipProps) {
+  const { active, maintenance, status } = props;
   return (
     <TooltipProvider delayDuration={50}>
       <Tooltip>
         <TooltipTrigger>
-          <StatusDot {...{ status, active }} />
+          <StatusDot {...props} />
         </TooltipTrigger>
         <TooltipContent>
-          {active
-            ? status === "active"
-              ? "Monitor is active"
-              : "Monitor has failed"
-            : "Monitor is inactive"}
+          {(() => {
+            if (!active) return "Monitor is inactive";
+            if (maintenance) return "Monitor in maintenance";
+            if (status === "error") return "Monitor has failed";
+            if (status === "degraded") return "Monitor is degraded";
+            return "Monitor is active";
+          })()}
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

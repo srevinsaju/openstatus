@@ -1,19 +1,13 @@
-import { z } from "zod";
-
 import { MonitorForm } from "@/components/forms/monitor/form";
 import { api } from "@/trpc/server";
+import { searchParamsCache } from "./search-params";
 
-const searchParamsSchema = z.object({
-  section: z.string().optional().default("request"),
-});
-
-export default async function EditPage({
-  params,
-  searchParams,
-}: {
-  params: { workspaceSlug: string; id: string };
-  searchParams: { [key: string]: string | string[] | undefined };
+export default async function EditPage(props: {
+  params: Promise<{ workspaceSlug: string; id: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
+  const searchParams = await props.searchParams;
+  const params = await props.params;
   const id = Number(params.id);
   const monitor = await api.monitor.getMonitorById.query({ id });
   const workspace = await api.workspace.getWorkspace.query();
@@ -28,14 +22,15 @@ export default async function EditPage({
 
   const tags = await api.monitorTag.getMonitorTagsByWorkspace.query();
 
-  // default is request
-  const search = searchParamsSchema.safeParse(searchParams);
+  const { section } = searchParamsCache.parse(searchParams);
 
   return (
     <MonitorForm
-      defaultSection={search.success ? search.data.section : undefined}
+      defaultSection={section}
       defaultValues={{
         ...monitor,
+        // FIXME - Why is this not working?
+        degradedAfter: monitor.degradedAfter ?? undefined,
         pages: pages
           .filter((page) =>
             page.monitorsToPages.map(({ monitorId }) => monitorId).includes(id),
@@ -48,10 +43,11 @@ export default async function EditPage({
           )
           .map(({ id }) => id),
       }}
-      plan={workspace?.plan}
+      limits={workspace.limits}
       notifications={notifications}
       tags={tags}
       pages={pages}
+      plan={workspace.plan}
     />
   );
 }

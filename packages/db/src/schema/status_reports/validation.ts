@@ -14,18 +14,19 @@ export const insertStatusReportUpdateSchema = createInsertSchema(
   {
     status: statusReportStatusSchema,
   },
-);
+).extend({
+  date: z.coerce.date().optional().default(new Date()),
+});
 
 export const insertStatusReportSchema = createInsertSchema(statusReport, {
   status: statusReportStatusSchema,
 })
   .extend({
-    date: z.date().optional().default(new Date()),
+    date: z.coerce.date().optional().default(new Date()),
     /**
      * relationship to monitors and pages
      */
     monitors: z.number().array().optional().default([]),
-    pages: z.number().array().optional().default([]),
   })
   .extend({
     /**
@@ -51,3 +52,4 @@ export type InsertStatusReportUpdate = z.infer<
   typeof insertStatusReportUpdateSchema
 >;
 export type StatusReportUpdate = z.infer<typeof selectStatusReportUpdateSchema>;
+export type StatusReportStatus = z.infer<typeof statusReportStatusSchema>;

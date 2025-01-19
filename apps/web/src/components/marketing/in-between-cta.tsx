@@ -1,6 +1,7 @@
 import Link from "next/link";
 
-import { Button } from "@openstatus/ui";
+import { cn } from "@/lib/utils";
+import { Button } from "@openstatus/ui/src/components/button";
 
 interface InBetweenCTAProps {
   description: string;
@@ -8,12 +9,22 @@ interface InBetweenCTAProps {
     "primary" | "secondary",
     { label: string; href: string; target?: string }
   >;
+  className?: string;
 }
 
-export function InBetweenCTA({ description, actions }: InBetweenCTAProps) {
+export function InBetweenCTA({
+  description,
+  actions,
+  className,
+}: InBetweenCTAProps) {
   const { primary, secondary } = actions;
   return (
-    <div className="my-8 flex flex-col items-center justify-between gap-6">
+    <div
+      className={cn(
+        "flex flex-col items-center justify-between gap-6",
+        className,
+      )}
+    >
       <p className="max-w-lg text-center text-lg text-muted-foreground">
         {description}
       </p>
@@ -33,7 +44,7 @@ export function InBetweenCTA({ description, actions }: InBetweenCTAProps) {
   );
 }
 
-export function MiddleCTA() {
+export function MiddleCTA(props: Pick<InBetweenCTAProps, "className">) {
   return (
     <InBetweenCTA
       description="Sick of booking a demo to know more? Test your endpoint or check our public dashboard right away."
@@ -41,18 +52,20 @@ export function MiddleCTA() {
         primary: { label: "Public Dashboard", href: "/public/monitors/1" },
         secondary: { label: "Speed Checker", href: "/play/checker" },
       }}
+      {...props}
     />
   );
 }
 
-export function BottomCTA() {
+export function BottomCTA(props: Pick<InBetweenCTAProps, "className">) {
   return (
     <InBetweenCTA
-      description="Learn over time how your services are performing, and inform your users when there are issues."
+      description="Learn how your services are performing over time, and notify your users of any issues."
       actions={{
         primary: { label: "Start for Free", href: "/app/login" },
         secondary: { label: "Schedule a Demo", href: "/cal", target: "_blank" },
       }}
+      {...props}
     />
   );
 }

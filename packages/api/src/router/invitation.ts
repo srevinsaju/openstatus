@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
+import { Events } from "@openstatus/analytics";
 import { and, eq, gte, isNull } from "@openstatus/db";
 import {
   insertInvitationSchema,
@@ -9,18 +10,17 @@ import {
   user,
   usersToWorkspaces,
 } from "@openstatus/db/src/schema";
-import { allPlans } from "@openstatus/plans";
 
-import { trackNewInvitation } from "../analytics";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
 
 export const invitationRouter = createTRPCRouter({
   create: protectedProcedure
     .input(insertInvitationSchema.pick({ email: true }))
+    .meta({ track: Events.InviteUser })
     .mutation(async (opts) => {
       const { email } = opts.input;
 
-      const _members = allPlans[opts.ctx.workspace.plan].limits.members;
+      const _members = opts.ctx.workspace.limits.members;
       const membersLimit = _members === "Unlimited" ? 420 : _members;
 
       const usersToWorkspacesNumbers = (
@@ -34,7 +34,7 @@ export const invitationRouter = createTRPCRouter({
           where: and(
             eq(invitation.workspaceId, opts.ctx.workspace.id),
             gte(invitation.expiresAt, new Date()),
-            isNull(invitation.acceptedAt)
+            isNull(invitation.acceptedAt),
           ),
         })
       ).length;
@@ -60,7 +60,7 @@ export const invitationRouter = createTRPCRouter({
 
       if (process.env.NODE_ENV === "development") {
         console.log(
-          `>>>> Invitation token: http://localhost:3000/app/invite?token=${token} <<<< `
+          `>>>> Invitation token: http://localhost:3000/app/invite?token=${token} <<<< `,
         );
       } else {
         await fetch("https://api.resend.com/emails", {
@@ -72,34 +72,36 @@ export const invitationRouter = createTRPCRouter({
           body: JSON.stringify({
             to: email,
             from: "OpenStatus <ping@openstatus.dev>",
-            subject: `You have been invited to join OpenStatus.dev`,
-            html: `<p>You have been invited by ${opts.ctx.user.email} ${!!opts.ctx.workspace.name ? `to join the workspace '${opts.ctx.workspace.name}'.` : "to join a workspace."}</p>
+            subject: "You have been invited to join OpenStatus.dev",
+            html: `<p>You have been invited by ${opts.ctx.user.email} ${
+              opts.ctx.workspace.name
+                ? `to join the workspace '${opts.ctx.workspace.name}'.`
+                : "to join a workspace."
+            }</p>
               <br>
-              <p>Click here to access the workspace: <a href='https://openstatus.dev/app/invite?token=${_invitation.token}'>accept invitation</a>.</p>
+              <p>Click here to access the workspace: <a href='https://openstatus.dev/app/invite?token=${
+                _invitation.token
+              }'>accept invitation</a>.</p>
               <p>If you don't have an account yet, it will require you to create one.</p>
               `,
           }),
         });
       }
 
-      await trackNewInvitation(opts.ctx.user, {
-        emailTo: email,
-        workspaceId: opts.ctx.workspace.id,
-      });
-
       return _invitation;
     }),
 
   delete: protectedProcedure
     .input(z.object({ id: z.number() }))
+    .meta({ track: Events.DeleteInvite })
     .mutation(async (opts) => {
       await opts.ctx.db
         .delete(invitation)
         .where(
           and(
             eq(invitation.id, opts.input.id),
-            eq(invitation.workspaceId, opts.ctx.workspace.id)
-          )
+            eq(invitation.workspaceId, opts.ctx.workspace.id),
+          ),
         )
         .run();
     }),
@@ -109,7 +111,7 @@ export const invitationRouter = createTRPCRouter({
       where: and(
         eq(invitation.workspaceId, opts.ctx.workspace.id),
         gte(invitation.expiresAt, new Date()),
-        isNull(invitation.acceptedAt)
+        isNull(invitation.acceptedAt),
       ),
     });
     return _invitations;
@@ -134,17 +136,18 @@ export const invitationRouter = createTRPCRouter({
    */
   acceptInvitation: publicProcedure
     .input(z.object({ token: z.string() }))
+    .meta({ track: Events.AcceptInvite })
     .output(
       z.object({
         message: z.string(),
         data: selectWorkspaceSchema.optional(),
-      })
+      }),
     )
     .mutation(async (opts) => {
       const _invitation = await opts.ctx.db.query.invitation.findFirst({
         where: and(
           eq(invitation.token, opts.input.token),
-          isNull(invitation.acceptedAt)
+          isNull(invitation.acceptedAt),
         ),
         with: {
           workspace: true,

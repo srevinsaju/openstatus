@@ -1,18 +1,14 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { Check, Info } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Fragment } from "react";
 
-import type { WorkspacePlan } from "@openstatus/plans";
+import { workspacePlans } from "@openstatus/db/src/schema/workspaces/constants";
+import type { WorkspacePlan } from "@openstatus/db/src/schema/workspaces/validation";
+import { Badge } from "@openstatus/ui/src/components/badge";
+import { Button } from "@openstatus/ui/src/components/button";
 import {
-  allPlans,
-  plans as defaultPlans,
-  pricingTableConfig,
-} from "@openstatus/plans";
-import {
-  Badge,
-  Button,
   Table,
   TableBody,
   TableCaption,
@@ -20,13 +16,21 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@openstatus/ui";
+} from "@openstatus/ui/src/components/table";
+import { pricingTableConfig } from "../../../config/pricing-table";
 
 import { LoadingAnimation } from "@/components/loading-animation";
 import { cn } from "@/lib/utils";
+import { allPlans } from "@openstatus/db/src/schema/plan/config";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@openstatus/ui";
 
 export function PricingTable({
-  plans = defaultPlans,
+  plans = workspacePlans,
   currentPlan,
   events,
   isLoading,
@@ -114,59 +118,78 @@ export function PricingTable({
                     {label}
                   </TableCell>
                 </TableRow>
-                {features.map(({ label, value, badge }, _i) => {
-                  return (
-                    <TableRow key={key}>
-                      <TableCell className="gap-1">
-                        {label}{" "}
-                        {badge ? (
-                          <Badge variant="secondary">{badge}</Badge>
-                        ) : null}
-                      </TableCell>
-                      {selectedPlans.map((plan, _i) => {
-                        const limitValue = plan.limits[value];
-                        function renderContent() {
-                          if (typeof limitValue === "boolean") {
-                            if (limitValue) {
+                {features.map(
+                  ({ label, value, badge, monthly, description }, _i) => {
+                    return (
+                      <TableRow key={key + label}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {label}
+                            {badge ? (
+                              <Badge variant="secondary">{badge}</Badge>
+                            ) : null}
+                            {description ? (
+                              <TooltipProvider delayDuration={200}>
+                                <Tooltip>
+                                  <TooltipTrigger className="ml-auto data-[state=closed]:text-muted-foreground">
+                                    <Info className="h-4 w-4" />
+                                  </TooltipTrigger>
+                                  <TooltipContent className="w-64">
+                                    {description}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            ) : null}
+                          </div>
+                        </TableCell>
+                        {selectedPlans.map((plan, _i) => {
+                          const limitValue =
+                            plan.limits[value as keyof typeof plan.limits];
+                          function renderContent() {
+                            if (typeof limitValue === "boolean") {
+                              if (limitValue) {
+                                return (
+                                  <Check className="h-4 w-4 text-foreground" />
+                                );
+                              }
                               return (
-                                <Check className="h-4 w-4 text-foreground" />
+                                <span className="text-muted-foreground/50">
+                                  &#8208;
+                                </span>
                               );
                             }
-                            return (
-                              <span className="text-muted-foreground/50">
-                                &#8208;
-                              </span>
-                            );
+                            if (typeof limitValue === "number") {
+                              return new Intl.NumberFormat("us")
+                                .format(limitValue)
+                                .toString();
+                            }
+                            if (
+                              Array.isArray(limitValue) &&
+                              limitValue.length > 0
+                            ) {
+                              return limitValue[0];
+                            }
+                            return limitValue;
                           }
-                          if (typeof limitValue === "number") {
-                            return (
-                              <span className="font-mono">{limitValue}</span>
-                            );
-                          }
-                          if (
-                            Array.isArray(limitValue) &&
-                            limitValue.length > 0
-                          ) {
-                            return limitValue[0];
-                          }
-                          return limitValue;
-                        }
 
-                        return (
-                          <TableCell
-                            key={key}
-                            className={cn(
-                              "p-3",
-                              plan.key === "team" && "bg-muted/30",
-                            )}
-                          >
-                            {renderContent()}
-                          </TableCell>
-                        );
-                      })}
-                    </TableRow>
-                  );
-                })}
+                          return (
+                            <TableCell
+                              // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
+                              key={key + value + _i}
+                              className={cn(
+                                "p-3 font-mono",
+                                plan.key === "team" && "bg-muted/30",
+                              )}
+                            >
+                              {renderContent()}
+                              {monthly ? "/mo" : ""}
+                            </TableCell>
+                          );
+                        })}
+                      </TableRow>
+                    );
+                  },
+                )}
               </Fragment>
             );
           },

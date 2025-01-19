@@ -1,42 +1,31 @@
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { z } from "zod";
 
-import { OSTinybird } from "@openstatus/tinybird";
-import { Button } from "@openstatus/ui";
+import { Button } from "@openstatus/ui/src/components/button";
 
+import { EmptyState } from "@/components/dashboard/empty-state";
 import { Header } from "@/components/dashboard/header";
 import { SimpleChart } from "@/components/monitor-charts/simple-chart";
 import { groupDataByTimestamp } from "@/components/monitor-charts/utils";
-import { env } from "@/env";
-import { quantiles } from "@/lib/monitor/utils";
+import { prepareMetricByIntervalByPeriod } from "@/lib/tb";
 import { api } from "@/trpc/server";
+import { searchParamsCache } from "./search-params";
 
 // Add loading page
 
-/**
- * allowed URL search params
- */
-const searchParamsSchema = z.object({
-  quantile: z.enum(quantiles).optional().default("p95"),
-  period: z.enum(["7d"]).optional().default("7d"),
-});
+export const revalidate = 120;
 
-const tb = new OSTinybird({ token: env.TINY_BIRD_API_KEY });
-
-export default async function Page({
-  params,
-  searchParams,
-}: {
-  params: { domain: string };
-  searchParams: { [key: string]: string | string[] | undefined };
+export default async function Page(props: {
+  params: Promise<{ domain: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
+  const searchParams = await props.searchParams;
+  const params = await props.params;
   const page = await api.page.getPageBySlug.query({ slug: params.domain });
-  const search = searchParamsSchema.safeParse(searchParams);
-  if (!page || !search.success) notFound();
+  const { quantile, period } = searchParamsCache.parse(searchParams);
 
-  const { quantile, period } = search.data;
+  if (!page) notFound();
 
   // filter monitor by public or not
 
@@ -46,8 +35,13 @@ export default async function Page({
     publicMonitors.length > 0
       ? await Promise.all(
           publicMonitors?.map(async (monitor) => {
-            const data = await tb.endpointChartAllRegions(period)({
+            const type = monitor.jobType as "http" | "tcp";
+            const data = await prepareMetricByIntervalByPeriod(
+              period,
+              type,
+            ).getData({
               monitorId: String(monitor.id),
+              interval: 60,
             });
 
             return { monitor, data };
@@ -77,12 +71,7 @@ export default async function Page({
           <ul className="grid gap-6">
             {monitorsWithData?.map(({ monitor, data }) => {
               const group =
-                data &&
-                groupDataByTimestamp(
-                  data.map((data) => ({ ...data, region: "ams" })),
-                  period,
-                  quantile,
-                );
+                data.data && groupDataByTimestamp(data.data, period, quantile);
               return (
                 <li key={monitor.id} className="grid gap-2">
                   <div className="flex w-full min-w-0 items-center justify-between gap-3">
@@ -99,7 +88,14 @@ export default async function Page({
                     </Button>
                   </div>
                   {group ? (
-                    <SimpleChart data={group.data} region="ams" />
+                    <SimpleChart
+                      data={group.data.map((d) => ({
+                        timestamp: d.timestamp,
+                        // REMINDER: select first region as default
+                        // TODO: we could create an average of all regions instead
+                        latency: d[monitor.regions?.[0]],
+                      }))}
+                    />
                   ) : (
                     <p>missing data</p>
                   )}
@@ -109,9 +105,11 @@ export default async function Page({
           </ul>
         </div>
       ) : (
-        <p className="text-center font-light text-muted-foreground text-sm">
-          No public monitor.
-        </p>
+        <EmptyState
+          icon="activity"
+          title="No public monitors"
+          description="No public monitors have been added to this page."
+        />
       )}
     </div>
   );

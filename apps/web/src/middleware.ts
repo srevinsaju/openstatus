@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 
-import { db, eq } from "@openstatus/db";
+import { db } from "@openstatus/db/src/db";
 import { user, usersToWorkspaces, workspace } from "@openstatus/db/src/schema";
 
 import { auth } from "@/lib/auth";
+import { eq } from "@openstatus/db";
 import { env } from "./env";
 
 export const getValidSubdomain = (host?: string | null) => {
@@ -39,6 +40,7 @@ const publicAppPaths = [
   "/app/sign-up",
   "/app/login",
   "/app/invite",
+  "/app/onboarding",
 ];
 
 // remove auth middleware if needed
@@ -153,6 +155,5 @@ export const config = {
     // "/node_modules/function-bind/**",
     // "**/node_modules/.pnpm/**/function-bind/**",
     // "../../packages/analytics/src/index.ts",
-    "**/node_modules/.pnpm/@jitsu*/**",
   ],
 };

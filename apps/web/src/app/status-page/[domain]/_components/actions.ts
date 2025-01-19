@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 
-import { trackAnalytics } from "@openstatus/analytics";
+import { Events, setupAnalytics } from "@openstatus/analytics";
 import { and, eq, sql } from "@openstatus/db";
 import { db } from "@openstatus/db/src/db";
 import { page, pageSubscriber } from "@openstatus/db/src/schema";
@@ -37,7 +37,7 @@ export async function handleSubscribe(formData: FormData) {
     .from(page)
     .where(
       // REMINDER: customDomain for pro users
-      sql`lower(${page.slug}) = ${slug} OR  lower(${page.customDomain}) = ${slug}`
+      sql`lower(${page.slug}) = ${slug} OR  lower(${page.customDomain}) = ${slug}`,
     )
     .get();
 
@@ -53,8 +53,8 @@ export async function handleSubscribe(formData: FormData) {
     .where(
       and(
         eq(pageSubscriber.email, validatedFields.data.email),
-        eq(pageSubscriber.pageId, pageData.id)
-      )
+        eq(pageSubscriber.pageId, pageData.id),
+      ),
     )
     .get();
 
@@ -65,6 +65,16 @@ export async function handleSubscribe(formData: FormData) {
   }
 
   const token = crypto.randomUUID();
+
+  await db
+    .insert(pageSubscriber)
+    .values({
+      email: validatedFields.data.email,
+      token,
+      pageId: pageData.id,
+      expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
+    })
+    .execute();
 
   await sendEmail({
     react: SubscribeEmail({
@@ -77,20 +87,8 @@ export async function handleSubscribe(formData: FormData) {
     subject: `Verify your subscription to ${pageData.title}`,
   });
 
-  await db
-    .insert(pageSubscriber)
-    .values({
-      email: validatedFields.data.email,
-      token,
-      pageId: pageData.id,
-      expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
-    })
-    .execute();
-
-  await trackAnalytics({
-    event: "Subscribe to Status Page",
-    slug: pageData.slug,
-  });
+  const analytics = await setupAnalytics({});
+  analytics.track({ ...Events.SubscribePage, slug: pageData.slug });
 }
 
 const passwordSchema = z.object({
@@ -118,7 +116,7 @@ export async function handleValidatePassword(formData: FormData) {
     .from(page)
     .where(
       // REMINDER: customDomain for pro users
-      sql`lower(${page.slug}) = ${slug} OR  lower(${page.customDomain}) = ${slug}`
+      sql`lower(${page.slug}) = ${slug} OR  lower(${page.customDomain}) = ${slug}`,
     )
     .get();
 

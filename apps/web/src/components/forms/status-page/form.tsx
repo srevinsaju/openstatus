@@ -21,7 +21,6 @@ import {
   TabsTrigger,
 } from "@/components/dashboard/tabs";
 import { useDebounce } from "@/hooks/use-debounce";
-import useUpdateSearchParams from "@/hooks/use-update-search-params";
 import { toast, toastAction } from "@/lib/toast";
 import { slugify } from "@/lib/utils";
 import { api } from "@/trpc/client";
@@ -68,6 +67,7 @@ export function StatusPageForm({
       icon: defaultValues?.icon || "",
       password: defaultValues?.password || "",
       passwordProtected: defaultValues?.passwordProtected || false,
+      showMonitorValues: defaultValues?.showMonitorValues || true,
       monitors:
         checkAllMonitors && allMonitors
           ? allMonitors.map(({ id }) => ({ monitorId: id, order: 0 }))
@@ -80,7 +80,6 @@ export function StatusPageForm({
   const watchSlug = form.watch("slug");
   const watchTitle = form.watch("title");
   const debouncedSlug = useDebounce(watchSlug, 1000); // using debounce to not exhaust the server
-  const updateSearchParams = useUpdateSearchParams();
 
   const checkUniqueSlug = useCallback(async () => {
     const isUnique = await api.page.getSlugUniqueness.query({
@@ -117,29 +116,33 @@ export function StatusPageForm({
   const onSubmit = async ({ ...props }: InsertPage) => {
     startTransition(async () => {
       try {
-        if (defaultValues) {
-          await api.page.update.mutate(props);
+        const isUnique = await checkUniqueSlug();
+        if (!isUnique) {
+          // the user will already have the "error" message - we include a toast as well
+          toastAction("unique-slug");
         } else {
-          const page = await api.page.create.mutate(props);
-          const id = page?.id || null;
-          router.replace(`?${updateSearchParams({ id })}`); // to stay on same page and enable 'Advanced' tab
-        }
+          if (defaultValues) {
+            await api.page.update.mutate(props);
+          } else {
+            await api.page.create.mutate(props);
+          }
 
-        toast.success("Saved successfully.", {
-          description: "Your status page is ready to go.",
-          action: {
-            label: "Visit",
-            onClick: () =>
-              window.open(`https://${props.slug}.openstatus.dev`, "_blank")
-                ?.location,
-          },
-        });
-        // otherwise, the form will stay dirty - keepValues is used to keep the current values in the form
-        form.reset({}, { keepValues: true });
-        if (nextUrl) {
-          router.push(nextUrl);
+          toast.success("Saved successfully.", {
+            description: "Your status page is ready to go.",
+            action: {
+              label: "Visit",
+              onClick: () =>
+                window.open(`https://${props.slug}.openstatus.dev`, "_blank")
+                  ?.location,
+            },
+          });
+          // otherwise, the form will stay dirty - keepValues is used to keep the current values in the form
+          form.reset({}, { keepValues: true });
+          if (nextUrl) {
+            router.push(nextUrl);
+          }
+          router.refresh();
         }
-        router.refresh();
       } catch {
         toastAction("error");
       }
@@ -159,15 +162,7 @@ export function StatusPageForm({
       <form
         onSubmit={async (e) => {
           e.preventDefault();
-          const isUnique = await checkUniqueSlug();
-          if (!isUnique) {
-            // the user will already have the "error" message - we include a toast as well
-            toastAction("unique-slug");
-          } else {
-            if (onSubmit) {
-              void form.handleSubmit(onSubmit)(e);
-            }
-          }
+          void form.handleSubmit(onSubmit)(e);
         }}
         className="grid w-full gap-6"
       >
@@ -193,7 +188,7 @@ export function StatusPageForm({
             <SectionMonitor form={form} monitors={allMonitors} />
           </TabsContent>
           <TabsContent value="advanced">
-            <SectionAdvanced form={form} />
+            <SectionAdvanced {...{ form }} />
           </TabsContent>
           <TabsContent value="visibility">
             <SectionVisibility {...{ form, plan, workspaceSlug }} />

@@ -7,21 +7,21 @@ import { Suspense, useEffect, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
+import { LoadingAnimation } from "@/components/loading-animation";
+import { useCookieState } from "@/hooks/use-cookie-state";
+import { toast, toastAction } from "@/lib/toast";
+import { wait } from "@/lib/utils";
+import { Button } from "@openstatus/ui/src/components/button";
 import {
-  Button,
   Form,
   FormControl,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
-  InputWithAddons,
-  Skeleton,
-} from "@openstatus/ui";
-
-import { LoadingAnimation } from "@/components/loading-animation";
-import { useCookieState } from "@/hooks/use-cookie-state";
-import { toast, toastAction } from "@/lib/toast";
+} from "@openstatus/ui/src/components/form";
+import { InputWithAddons } from "@openstatus/ui/src/components/input-with-addons";
+import { Skeleton } from "@openstatus/ui/src/components/skeleton";
 import { createProtectedCookieKey } from "../utils";
 import { handleValidatePassword } from "./actions";
 
@@ -30,7 +30,7 @@ import { handleValidatePassword } from "./actions";
 // in the `layout.tsx` because we cannot access the search params there
 
 const schema = z.object({
-  password: z.string(),
+  password: z.string().min(1),
 });
 
 type Schema = z.infer<typeof schema>;
@@ -69,6 +69,12 @@ export function PasswordForm({ slug }: PasswordFormProps) {
         formData.append("password", data.password);
         formData.append("slug", slug);
 
+        // REMINDER: used for the demo on features/status-page
+        if (slug === "") {
+          await wait(500);
+          return;
+        }
+
         const res = await handleValidatePassword(formData);
 
         if (res?.error || res.data === undefined) {
@@ -101,7 +107,7 @@ export function PasswordForm({ slug }: PasswordFormProps) {
               <FormLabel>Password</FormLabel>
               <FormControl>
                 <InputWithAddons
-                  placeholder="top-secret"
+                  placeholder="open-source"
                   type={inputType}
                   disabled={loading}
                   trailing={

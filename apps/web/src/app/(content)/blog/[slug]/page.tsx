@@ -1,4 +1,4 @@
-import { allPosts } from "contentlayer/generated";
+import { allPosts } from "content-collections";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
@@ -19,16 +19,19 @@ export async function generateStaticParams() {
   }));
 }
 
-export async function generateMetadata({
-  params,
-}: {
-  params: { slug: string };
+export async function generateMetadata(props: {
+  params: Promise<{ slug: string }>;
 }): Promise<Metadata | undefined> {
+  const params = await props.params;
   const post = allPosts.find((post) => post.slug === params.slug);
   if (!post) {
     return;
   }
-  const { title, publishedAt: publishedTime, description, slug, image } = post;
+  const { title, publishedAt, description, slug, image } = post;
+
+  const encodedTitle = encodeURIComponent(title);
+  const encodedDescription = encodeURIComponent(description);
+  const encodedImage = encodeURIComponent(image);
 
   return {
     ...defaultMetadata,
@@ -39,11 +42,11 @@ export async function generateMetadata({
       title,
       description,
       type: "article",
-      publishedTime,
+      publishedTime: publishedAt.toISOString(),
       url: `https://www.openstatus.dev/blog/${slug}`,
       images: [
         {
-          url: `https://openstatus.dev/api/og/post?title=${title}&description=${description}&image=${image}`,
+          url: `https://openstatus.dev/api/og/post?title=${encodedTitle}&image=${encodedImage}&description=${encodedDescription}`,
         },
       ],
     },
@@ -52,23 +55,24 @@ export async function generateMetadata({
       title,
       description,
       images: [
-        `https://openstatus.dev/api/og/post?title=${title}&description=${description}&image=${image}`,
+        `https://openstatus.dev/api/og/post?title=${encodedTitle}&image=${encodedImage}&description=${encodedDescription}`,
       ],
     },
   };
 }
 
-export default function PostPage({ params }: { params: { slug: string } }) {
+export default async function PostPage(props: {
+  params: Promise<{ slug: string }>;
+}) {
+  const params = await props.params;
   const post = allPosts.find((post) => post.slug === params.slug);
 
-  if (!post) {
-    notFound();
-  }
+  if (!post) notFound();
 
   return (
     <>
       <BackButton href="/blog" />
-      <Shell className="md:py-12 sm:py-8">
+      <Shell className="sm:py-8 md:py-12">
         <Article post={post} />
       </Shell>
     </>

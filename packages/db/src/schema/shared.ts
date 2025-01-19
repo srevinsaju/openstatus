@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { selectIncidentSchema } from "./incidents/validation";
+import { selectMaintenanceSchema } from "./maintenances";
 import { selectMonitorSchema } from "./monitors";
 import { selectPageSchema } from "./pages";
 import {
@@ -30,6 +31,19 @@ export const selectStatusReportPageSchema = selectStatusReportSchema.extend({
     .default([]),
 });
 
+export const selectMaintenancePageSchema = selectMaintenanceSchema.extend({
+  maintenancesToMonitors: z
+    .array(
+      z.object({
+        monitorId: z.number(),
+        maintenanceId: z.number(),
+      }),
+    )
+    .default([]),
+});
+// TODO: it would be nice to automatically add the monitor relation here
+// .refine((data) => ({ monitors: data.maintenancesToMonitors.map((m) => m.monitorId) }));
+
 export const selectPageSchemaWithRelation = selectPageSchema.extend({
   monitors: z.array(selectMonitorSchema),
   statusReports: z.array(selectStatusReportPageSchema),
@@ -44,6 +58,11 @@ export const selectPageSchemaWithMonitorsRelation = selectPageSchema.extend({
       monitor: selectMonitorSchema,
     }),
   ),
+  maintenancesToPages: selectMaintenanceSchema.array().default([]),
+  statusReports: selectStatusReportSchema
+    .extend({ statusReportUpdates: selectStatusReportUpdateSchema.array() })
+    .array()
+    .default([]),
 });
 
 export const selectPublicPageSchemaWithRelation = selectPageSchema
@@ -51,13 +70,14 @@ export const selectPublicPageSchemaWithRelation = selectPageSchema
     monitors: z.array(selectPublicMonitorSchema),
     statusReports: z.array(selectStatusReportPageSchema),
     incidents: z.array(selectIncidentSchema),
+    maintenances: z.array(selectMaintenancePageSchema),
     workspacePlan: workspacePlanSchema
       .nullable()
       .default("free")
       .transform((val) => val ?? "free"),
   })
   .omit({
-    workspaceId: true,
+    // workspaceId: true,
     id: true,
   });
 

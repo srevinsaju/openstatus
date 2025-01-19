@@ -10,9 +10,9 @@ export default async function Layout({ children }: { children: ReactNode }) {
   const isLimitReached = await api.page.isPageLimitReached.query();
 
   return (
-    <AppPageLayout withHelpCallout>
+    <AppPageLayout>
       <Header
-        title="Pages"
+        title="Status Pages"
         description="Overview of all your pages."
         actions={
           <ButtonWithDisableTooltip

@@ -30,6 +30,7 @@ export async function GET(req: Request) {
   const tracker = new Tracker({
     incidents: passwordProtected ? undefined : page?.incidents,
     statusReports: passwordProtected ? undefined : page?.statusReports,
+    maintenances: passwordProtected ? undefined : page?.maintenances,
   });
 
   return new ImageResponse(

@@ -10,7 +10,7 @@ export type Feature = {
 export type FeatureDescription = {
   icon: ValidIcon;
   catchline: string;
-  description: string;
+  description: React.ReactNode;
   badge?: "Coming soon" | "New";
 };
 
@@ -62,7 +62,7 @@ export const cardConfig = {
         icon: "puzzle",
         catchline: "Build trust",
         description:
-          "Showcase your reliability to your users, and reduce the numbers of customers service tickets.",
+          "Showcase your reliability to your users, and reduce the number of customer service tickets.",
       },
       {
         icon: "globe",
@@ -84,9 +84,9 @@ export const cardConfig = {
     features: [
       {
         icon: "sparkles",
-        catchline: "Connect.",
+        catchline: "Reduce fatigue.",
         description:
-          "Aggregate alerts from all your monitoring services (Grafana, Datadog) and use our AI to make them actionable.",
+          "Reduce your alerts fatigue with automatic noise reduction.",
         badge: "Coming soon",
       },
       {

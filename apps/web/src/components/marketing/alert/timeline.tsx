@@ -88,11 +88,11 @@ const timeline = [
     },
   },
   {
-    label: "Grafana alert",
+    label: "Screenshot captured",
     date: new Date("03.12.2023, 19:14:55"),
     message: "3 incoming notifications from Grafana.",
     icon: {
-      name: "webhook",
+      name: "camera",
       textColor: "text-amber-500",
       borderColor: "border-amber-500/40",
     },
@@ -110,7 +110,7 @@ const timeline = [
   {
     label: "Monitor recovered",
     date: new Date("03.12.2023, 19:21:30"),
-    message: "The enpoint response is back.",
+    message: "The endpoint response is back.",
     icon: {
       name: "check",
       textColor: "text-green-500",

@@ -9,16 +9,21 @@ import {
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuTrigger,
-} from "@openstatus/ui";
+} from "@openstatus/ui/src/components/context-menu";
+import Image from "next/image";
 
 export function BrandName() {
   return (
     <ContextMenu>
       <ContextMenuTrigger>
-        <Link
-          href="/"
-          className="font-cal text-lg text-muted-foreground hover:text-foreground"
-        >
+        <Link href="/" className="flex items-center gap-2 font-cal">
+          <Image
+            src="/icon.png"
+            alt="OpenStatus"
+            height={30}
+            width={30}
+            className="rounded-full border border-border bg-transparent"
+          />
           OpenStatus
         </Link>
       </ContextMenuTrigger>

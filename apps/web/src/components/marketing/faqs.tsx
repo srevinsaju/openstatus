@@ -1,13 +1,13 @@
 "use client";
 
-import { allFAQs } from "contentlayer/generated";
+import { allFAQs } from "content-collections";
 
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@openstatus/ui";
+} from "@openstatus/ui/src/components/accordion";
 
 import { Mdx } from "../content/mdx";
 import {
@@ -32,10 +32,10 @@ export function FAQs() {
       <div>
         <Accordion type="single" collapsible className="w-full">
           {faqs.map((faq, i) => (
-            <AccordionItem key={faq._id} value={`item-${i}`}>
+            <AccordionItem key={faq.slug} value={`item-${i}`}>
               <AccordionTrigger>{faq.title}</AccordionTrigger>
               <AccordionContent>
-                <Mdx code={faq.body.code} />
+                <Mdx code={faq.mdx} />
               </AccordionContent>
             </AccordionItem>
           ))}

@@ -5,10 +5,13 @@ import { db } from "@openstatus/db/src/db";
 import { page, pageSubscriber } from "@openstatus/db/src/schema";
 import { SubscribeEmail, sendEmail } from "@openstatus/emails";
 
+// TODO: use trpc route
+
 export async function POST(
   req: Request,
-  { params }: { params: { domain: string } },
+  props: { params: Promise<{ domain: string }> },
 ) {
+  const params = await props.params;
   //
   const data = await req.json();
   const result = z.object({ email: z.string().email() }).parse(data);
@@ -37,18 +40,8 @@ export async function POST(
     return new Response("Not found", { status: 401 });
   }
 
-  const token = (Math.random() + 1).toString(36).substring(10);
+  const token = crypto.randomUUID();
 
-  await sendEmail({
-    react: SubscribeEmail({
-      domain: params.domain,
-      token: token,
-      page: pageData.title,
-    }),
-    from: "OpenStatus <notification@notifications.openstatus.dev>",
-    to: [result.email],
-    subject: `Verify your subscription to ${pageData.title}`,
-  });
   await db
     .insert(pageSubscriber)
     .values({
@@ -58,5 +51,17 @@ export async function POST(
       expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
     })
     .execute();
+
+  await sendEmail({
+    react: SubscribeEmail({
+      domain: params.domain,
+      token,
+      page: pageData.title,
+    }),
+    from: "OpenStatus <notification@notifications.openstatus.dev>",
+    to: [result.email],
+    subject: `Verify your subscription to ${pageData.title}`,
+  });
+
   return Response.json({ message: "Hello world" });
 }

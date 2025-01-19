@@ -1,9 +1,10 @@
 import { format } from "date-fns";
 
-import type { Region, ResponseGraph } from "@openstatus/tinybird";
-import { regionsDict } from "@openstatus/utils";
+import { flyRegionsDict } from "@openstatus/utils";
 
 import type { Period, Quantile } from "@/lib/monitor/utils";
+import type { ResponseGraph } from "@/lib/tb";
+import type { Region } from "@openstatus/db/src/schema/constants";
 
 /**
  *
@@ -25,7 +26,7 @@ export function groupDataByTimestamp(
     (acc, curr) => {
       const { timestamp, region } = curr;
       const latency = curr[`${quantile}Latency`];
-      const { flag, code, location } = regionsDict[region];
+      const { flag, code, location } = flyRegionsDict[region];
       const fullNameRegion = `${code}`;
       regions[fullNameRegion] = { flag, code, location }; // to get the region keys
       if (timestamp === currentTimestamp) {
@@ -47,7 +48,7 @@ export function groupDataByTimestamp(
       }
       return acc;
     },
-    [] as (Partial<Record<Region, string>> & { timestamp: string })[],
+    [] as (Partial<Record<Region, number>> & { timestamp: string })[],
   );
 
   // regions are sorted by the flag utf-8 code
@@ -66,7 +67,7 @@ export function groupDataByTimestamp(
  */
 export function renderTimestamp(timestamp: number, _period: Period) {
   const date = new Date(timestamp);
-  return format(date, "MMM d, HH:mm");
+  return date.toISOString();
 }
 
 export function dataFormatter(number: number) {
@@ -74,6 +75,6 @@ export function dataFormatter(number: number) {
 }
 
 export function regionFormatter(region: Region) {
-  const { code, flag } = regionsDict[region];
+  const { code, flag } = flyRegionsDict[region];
   return `${flag} ${code}`;
 }

@@ -4,7 +4,6 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import LocalFont from "next/font/local";
 
-import { OpenStatusProvider } from "@openstatus/next-monitoring";
 import { Toaster } from "@/components/ui/sonner";
 
 import {
@@ -14,6 +13,8 @@ import {
 } from "@/app/shared-metadata";
 import { TailwindIndicator } from "@/components/tailwind-indicator";
 import { ThemeProvider } from "@/components/theme-provider";
+import { TRPCReactQueryProvider } from "@/trpc/rq-client";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 import Background from "./_components/background";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -39,22 +40,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${
           inter.className
           // biome-ignore lint/nursery/useSortedClasses: <explanation>
         } ${calSans.variable}`}
       >
-        {/* Only include RUM in prod */}
-        {process.env.NODE_ENV === "production" && (
-          <OpenStatusProvider dsn="openstatus" />
-        )}
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-          <Background>{children}</Background>
-          <Toaster richColors />
-          <TailwindIndicator />
-        </ThemeProvider>
+        <NuqsAdapter>
+          <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+            <TRPCReactQueryProvider>
+              <Background>{children}</Background>
+              <Toaster richColors closeButton />
+              <TailwindIndicator />
+            </TRPCReactQueryProvider>
+          </ThemeProvider>
+        </NuqsAdapter>
       </body>
     </html>
   );

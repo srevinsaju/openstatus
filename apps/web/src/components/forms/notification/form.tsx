@@ -2,75 +2,88 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useMemo, useTransition } from "react";
+import { useTransition } from "react";
 import { useForm } from "react-hook-form";
 
 import type {
   InsertNotification,
+  InsertNotificationWithData,
+  Monitor,
+  NotificationProvider,
   WorkspacePlan,
 } from "@openstatus/db/src/schema";
-import { insertNotificationSchema } from "@openstatus/db/src/schema";
-import { Button, Form } from "@openstatus/ui";
+import { InsertNotificationWithDataSchema } from "@openstatus/db/src/schema";
+import { Badge, Form } from "@openstatus/ui";
 
-import { LoadingAnimation } from "@/components/loading-animation";
-import { toastAction } from "@/lib/toast";
-import { api } from "@/trpc/client";
-import { SaveButton } from "../shared/save-button";
 import {
-  getDefaultProviderData,
-  getProviderMetaData,
-  setProviderData,
-} from "./config";
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/dashboard/tabs";
+import { toast, toastAction } from "@/lib/toast";
+import { api } from "@/trpc/client";
+import { TRPCClientError } from "@trpc/client";
+import { SaveButton } from "../shared/save-button";
 import { General } from "./general";
+import { SectionConnect } from "./section-connect";
 
 interface Props {
   defaultValues?: InsertNotification;
+  defaultSection?: string;
   onSubmit?: () => void;
+  monitors?: Monitor[];
   workspacePlan: WorkspacePlan;
   nextUrl?: string;
+  provider: NotificationProvider;
+  callbackData?: string;
 }
 
 export function NotificationForm({
   defaultValues,
+  defaultSection = "connect",
   onSubmit: onExternalSubmit,
   workspacePlan,
+  monitors,
   nextUrl,
+  provider,
+  callbackData,
 }: Props) {
   const [isPending, startTransition] = useTransition();
-  const [isTestPending, startTestTransition] = useTransition();
   const router = useRouter();
-  const form = useForm<InsertNotification>({
-    resolver: zodResolver(insertNotificationSchema),
+  const form = useForm<InsertNotificationWithData>({
+    resolver: zodResolver(InsertNotificationWithDataSchema),
     defaultValues: {
       ...defaultValues,
+      provider,
       name: defaultValues?.name || "",
-      data: getDefaultProviderData(defaultValues),
+      data: JSON.parse(defaultValues?.data || "{}"),
     },
   });
-  const watchProvider = form.watch("provider");
-  const watchWebhookUrl = form.watch("data");
-  const providerMetaData = useMemo(
-    () => getProviderMetaData(watchProvider),
-    [watchProvider],
-  );
 
-  async function onSubmit({ provider, data, ...rest }: InsertNotification) {
+  async function onSubmit({
+    provider,
+    data,
+    ...rest
+  }: InsertNotificationWithData) {
+    console.log({ provider, data, ...rest });
     startTransition(async () => {
       try {
-        if (data === "") {
-          form.setError("data", { message: "This field is required" });
-          return;
+        if (provider === "pagerduty") {
+          if (callbackData) {
+            data.pagerduty = callbackData;
+          }
         }
         if (defaultValues) {
           await api.notification.update.mutate({
             provider,
-            data: JSON.stringify(setProviderData(provider, data)),
+            data: JSON.stringify(data),
             ...rest,
           });
         } else {
           await api.notification.create.mutate({
             provider,
-            data: JSON.stringify(setProviderData(provider, data)),
+            data: JSON.stringify(data),
             ...rest,
           });
         }
@@ -79,23 +92,11 @@ export function NotificationForm({
         }
         router.refresh();
         toastAction("saved");
-      } catch {
-        toastAction("error");
+      } catch (e) {
+        if (e instanceof TRPCClientError) toast.error(e.message);
+        else toastAction("error");
       } finally {
         onExternalSubmit?.();
-      }
-    });
-  }
-
-  async function sendTestWebhookPing() {
-    const webhookUrl = form.getValues("data");
-    if (!webhookUrl) return;
-    startTestTransition(async () => {
-      const isSuccessfull = await providerMetaData.sendTest?.(webhookUrl);
-      if (isSuccessfull) {
-        toastAction("test-success");
-      } else {
-        toastAction("test-error");
       }
     });
   }
@@ -108,23 +109,22 @@ export function NotificationForm({
         className="flex flex-col gap-4"
       >
         <General form={form} plan={workspacePlan} />
+        <Tabs defaultValue={defaultSection} className="w-full">
+          <TabsList>
+            <TabsTrigger value="connect">
+              Connect{" "}
+              {defaultValues?.monitors.length ? (
+                <Badge variant="secondary" className="ml-1">
+                  {defaultValues?.monitors.length}
+                </Badge>
+              ) : null}
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="connect">
+            <SectionConnect form={form} monitors={monitors} />
+          </TabsContent>
+        </Tabs>
         <div className="flex gap-4 sm:justify-end">
-          {providerMetaData.sendTest && (
-            <Button
-              type="button"
-              variant="secondary"
-              className="w-full sm:w-auto"
-              size="lg"
-              disabled={!watchWebhookUrl || isTestPending}
-              onClick={sendTestWebhookPing}
-            >
-              {!isTestPending ? (
-                "Test Webhook"
-              ) : (
-                <LoadingAnimation variant="inverse" />
-              )}
-            </Button>
-          )}
           <SaveButton
             form="notification-form"
             isPending={isPending}

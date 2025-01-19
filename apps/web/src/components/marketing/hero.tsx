@@ -2,10 +2,12 @@ import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 
-import { Badge, Button } from "@openstatus/ui";
+import { Badge } from "@openstatus/ui/src/components/badge";
+import { Button } from "@openstatus/ui/src/components/button";
 
 import { getGitHubStars } from "@/lib/github";
 import { cn, numberFormatter } from "@/lib/utils";
+import { SpeedCheckerButton } from "./speed-checker-button";
 
 export function Hero() {
   return (
@@ -33,9 +35,8 @@ export function Hero() {
           A better way to monitor your services.
         </h1>
         <p className="mx-auto max-w-md text-lg text-muted-foreground md:max-w-xl md:text-xl">
-          Monitor your API and website from 6 continents, detect some
-          performance issues and receive notifications before your users are
-          affected.
+          Monitor your API and website globally, identify performance issues,
+          downtime and receive alerts before your users are affected.
         </p>
       </div>
       <div className="my-4 grid gap-2 sm:grid-cols-2">

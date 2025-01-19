@@ -1,10 +1,12 @@
+/** @jsxImportSource react */
+
 import { Body, Head, Html, Link, Preview } from "@react-email/components";
 
 const WelcomeEmail = () => {
   return (
     <Html>
       <Head>
-        <title>Level up your website and API monitoring.</title>
+        <title>Welcome to OpenStatus</title>
         <Preview>Take the most of your OpenStatus monitoring</Preview>
         <Body>
           Hey 👋
@@ -21,24 +23,24 @@ const WelcomeEmail = () => {
           <br />
           Here are a few things you can do with OpenStatus:
           <br />- Use our{" "}
-          <a href="https://docs.openstatus.dev/packages/terraform">
-            Terraform providers
+          <a href="https://docs.openstatus.dev/tools/terraform">
+            Terraform provider
           </a>{" "}
           to manage your monitors
           <br />- Integrate your status within your application with our{" "}
-          <a href="https://docs.openstatus.dev/packages/status-widget">API</a>{" "}
-          and{" "}
-          <a href="https://docs.openstatus.dev/packages/react">React Widget</a>
+          <a href="https://docs.openstatus.dev/tools/status-widget">API</a> and{" "}
+          <a href="https://docs.openstatus.dev/tools/react/">React Widget</a>
           <br />- Build your own status page with our{" "}
-          <a href="https://docs.openstatus.dev/api-reference">API</a> and host
-          it where you want. Here's our{" "}
+          <a href="https://api.openstatus.dev/v1">API</a> and host it where you
+          want. Here's our{" "}
           <a href="https://github.com/openstatusHQ/astro-status-page">
             Astro template
           </a>{" "}
           that you can easily host on CloudFlare
           <br />
           <br />
-          If you have any questions, just let me know.
+          If you have any questions, just let me know, or book a call with me{" "}
+          <a href="https://cal.com/team/openstatus/30min">here</a>.
           <br />
           Thank you,
           <br />
@@ -55,4 +57,4 @@ const WelcomeEmail = () => {
   );
 };
 
-export { WelcomeEmail };
+export default WelcomeEmail;

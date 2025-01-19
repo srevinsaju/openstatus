@@ -17,6 +17,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   Button,
+  Checkbox,
   FormControl,
   FormDescription,
   FormField,
@@ -26,6 +27,8 @@ import {
   Input,
 } from "@openstatus/ui";
 
+import { BarDescription } from "@/components/tracker/tracker";
+import { MousePointer2 } from "lucide-react";
 import { SectionHeader } from "../shared/section-header";
 
 interface Props {
@@ -158,6 +161,61 @@ export function SectionAdvanced({ form }: Props) {
           </FormItem>
         )}
       />
+      <div className="grid w-full gap-4 md:col-span-full md:grid-cols-3 md:grid-rows-2">
+        <SectionHeader
+          title="Monitor Values Visibility"
+          description={
+            <>
+              Toggle the visibility of the values on the status page. Share your{" "}
+              <span className="font-medium text-foreground">uptime</span> and
+              the{" "}
+              <span className="font-medium text-foreground">
+                number of request
+              </span>{" "}
+              to your endpoint.
+            </>
+          }
+          className="md:col-span-2"
+        />
+        <div className="group flex flex-col justify-center gap-1 rounded-md border border-dashed p-3 md:row-span-2">
+          <div className="flex flex-row items-center justify-center gap-2 text-muted-foreground group-hover:text-foreground">
+            <MousePointer2 className="h-3 w-3" />
+            <p className="text-sm">Hover State</p>
+          </div>
+          <div className="mx-auto max-w-[15rem]">
+            <BarDescription
+              label="Operational"
+              day={new Date().toISOString()}
+              count={5600}
+              ok={5569}
+              showValues={!!form.getValues("showMonitorValues")}
+              barClassName="bg-status-operational"
+              className="rounded-md border bg-popover p-2 text-popover-foreground shadow-md md:col-span-1"
+            />
+          </div>
+        </div>
+        <FormField
+          control={form.control}
+          name="showMonitorValues"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-start space-x-3 space-y-0 md:col-span-2">
+              <FormControl>
+                <Checkbox
+                  disabled={field.disabled}
+                  checked={field.value ?? false}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+              <div className="space-y-1 leading-none">
+                <FormLabel>Show values</FormLabel>
+                <FormDescription>
+                  Share the numbers to your users.
+                </FormDescription>
+              </div>
+            </FormItem>
+          )}
+        />
+      </div>
       <AlertDialog open={open} onOpenChange={(value) => setOpen(value)}>
         <AlertDialogContent>
           <AlertDialogHeader>

@@ -1,6 +1,6 @@
-import type { Region, ResponseGraph } from "@openstatus/tinybird";
-
 import type { Period, Quantile } from "@/lib/monitor/utils";
+import type { ResponseGraph } from "@/lib/tb";
+import type { Region } from "@openstatus/db/src/schema/constants";
 import { SimpleChart } from "./simple-chart";
 import { groupDataByTimestamp } from "./utils";
 
@@ -21,7 +21,12 @@ export function SimpleChartWrapper({
       <div className="w-24">
         <p className="font-mono">{region}</p>
       </div>
-      <SimpleChart data={group.data} region={region} />
+      <SimpleChart
+        data={group.data.map((d) => ({
+          timestamp: d.timestamp,
+          latency: d[region],
+        }))}
+      />
     </div>
   );
 }

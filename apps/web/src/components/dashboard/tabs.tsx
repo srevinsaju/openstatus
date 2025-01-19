@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Separator,
   Tabs as ShadcnTabs,
@@ -11,18 +13,18 @@ import { cn } from "@/lib/utils";
 export function TabsList({
   className,
   ...props
-}: React.ComponentPropsWithoutRef<typeof ShadcnTabsList>) {
+}: React.ComponentPropsWithoutRef<typeof ShadcnTabsList> & {}) {
   return (
-    <>
+    // REMINDER: needed for sticky header - ideally, we remove the div
+    <div className={className}>
       <ShadcnTabsList
         className={cn(
           "w-full justify-start overflow-x-auto overflow-y-hidden rounded-none bg-transparent p-0",
-          className,
         )}
         {...props}
       />
       <Separator className="mb-6" />
-    </>
+    </div>
   );
 }
 
@@ -33,7 +35,7 @@ export function TabsTrigger({
   return (
     <ShadcnTabsTrigger
       className={cn(
-        "relative rounded-none border-b-4 border-b-transparent bg-transparent px-4 pt-2 pb-3 text-muted-foreground shadow-none transition-none data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground hover:text-primary data-[state=active]:shadow-none",
+        "relative rounded-none border-b-4 border-b-transparent bg-transparent px-4 pt-2 pb-3 text-muted-foreground shadow-none transition-none hover:text-primary data-[state=active]:border-b-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none",
         className,
       )}
       {...props}

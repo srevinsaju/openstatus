@@ -3,8 +3,9 @@
 import type { UseFormReturn } from "react-hook-form";
 
 import type { InsertMonitor, WorkspacePlan } from "@openstatus/db/src/schema";
-import { monitorPeriodicitySchema } from "@openstatus/db/src/schema";
-import { getLimit } from "@openstatus/plans";
+import { monitorPeriodicitySchema } from "@openstatus/db/src/schema/constants";
+import { getLimit } from "@openstatus/db/src/schema/plan/utils";
+
 import {
   FormControl,
   FormDescription,
@@ -18,10 +19,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@openstatus/ui";
-import { flyRegions, flyRegionsDict } from "@openstatus/utils";
+import { groupByContinent } from "@openstatus/utils";
 
+import type { Limits } from "@openstatus/db/src/schema/plan/schema";
 import { CheckboxLabel } from "../shared/checkbox-label";
 import { SectionHeader } from "../shared/section-header";
+import { SelectRegion } from "./select-region";
 
 // TODO: centralize in a shared file!
 const cronJobs = [
@@ -35,18 +38,20 @@ const cronJobs = [
 
 interface Props {
   form: UseFormReturn<InsertMonitor>;
+  limits: Limits;
   plan: WorkspacePlan;
 }
 
-export function SectionScheduling({ form, plan }: Props) {
-  const periodicityLimit = getLimit(plan, "periodicity");
+export function SectionScheduling({ form, limits, plan }: Props) {
+  const periodicityLimit = getLimit(limits, "periodicity");
+  const regionsLimit = getLimit(limits, "regions");
   return (
     <div className="grid w-full gap-4">
       <SectionHeader
         title="Schedule and Regions"
         description="Customize the period of time and the regions where your endpoint will be monitored."
       />
-      <div className="grid md:grid-cols-3 sm:grid-cols-2">
+      <div className="grid sm:grid-cols-2 md:grid-cols-3">
         <FormField
           control={form.control}
           name="periodicity"
@@ -87,53 +92,98 @@ export function SectionScheduling({ form, plan }: Props) {
       <FormField
         control={form.control}
         name="regions"
-        // biome-ignore lint/correctness/noUnusedVariables: <explanation>
         render={({ field }) => {
           return (
             <FormItem>
-              <div className="mb-4">
-                <FormLabel className="text-base">Regions</FormLabel>
-                <FormDescription>
-                  Select the regions you want to monitor your endpoint from.
-                </FormDescription>
-              </div>
-              <div className="grid grid-cols-1 grid-rows-1 gap-4 md:grid-cols-3 sm:grid-cols-2">
-                {flyRegions.map((item) => (
-                  <FormField
-                    key={item}
-                    control={form.control}
-                    name="regions"
-                    render={({ field }) => {
-                      const { flag, location } = flyRegionsDict[item];
-                      return (
-                        <FormItem key={item} className="h-full w-full">
-                          <FormControl className="h-full">
-                            <CheckboxLabel
-                              id={item}
-                              name="region"
-                              checked={field.value?.includes(item)}
-                              onCheckedChange={(checked) => {
-                                return checked
-                                  ? field.onChange([
-                                      ...(field.value ? field.value : []),
-                                      item,
-                                    ])
-                                  : field.onChange(
-                                      field.value?.filter(
-                                        (value) => value !== item
-                                      )
-                                    );
-                              }}
-                            >
-                              {location} {flag}
-                            </CheckboxLabel>
-                          </FormControl>
-                        </FormItem>
-                      );
-                    }}
+              <FormLabel className="text-base">Regions</FormLabel>
+              <div>
+                <FormControl>
+                  <SelectRegion
+                    value={field.value}
+                    allowedRegions={regionsLimit}
+                    onChange={field.onChange}
                   />
-                ))}
+                </FormControl>
               </div>
+              <FormDescription>
+                Select the regions you want to monitor your endpoint from.{" "}
+                <br />
+                {plan === "free"
+                  ? "Only a few regions are available in the free plan. Upgrade to access all regions."
+                  : ""}
+              </FormDescription>
+              <div>
+                {Object.entries(groupByContinent)
+                  .sort((a, b) => a[0].localeCompare(b[0]))
+                  .map(([continent, regions]) => {
+                    return { continent, regions };
+                  })
+                  .map((current) => {
+                    return (
+                      <div key={current.continent} className="py-2">
+                        <p className="font-medium text-muted-foreground text-sm">
+                          {current.continent}
+                        </p>
+                        <div className="grid grid-cols-3 gap-2">
+                          {current.regions
+                            .sort((a, b) =>
+                              a.location.localeCompare(b.location),
+                            )
+                            .map((item) => {
+                              return (
+                                <FormField
+                                  key={item.code}
+                                  control={form.control}
+                                  name="regions"
+                                  render={({ field }) => {
+                                    const { flag, location } = item;
+                                    return (
+                                      <FormItem
+                                        key={item.code}
+                                        className="h-full w-full"
+                                      >
+                                        <FormControl className="h-full">
+                                          <CheckboxLabel
+                                            disabled={
+                                              !regionsLimit.includes(item.code)
+                                            }
+                                            id={item.code}
+                                            name="region"
+                                            checked={field.value?.includes(
+                                              item.code,
+                                            )}
+                                            onCheckedChange={(checked) => {
+                                              return checked
+                                                ? field.onChange([
+                                                    ...(field.value
+                                                      ? field.value
+                                                      : []),
+                                                    item.code,
+                                                  ])
+                                                : field.onChange(
+                                                    field.value?.filter(
+                                                      (value) =>
+                                                        value !== item.code,
+                                                    ),
+                                                  );
+                                            }}
+                                            className="p-3"
+                                          >
+                                            {location} {flag}
+                                          </CheckboxLabel>
+                                        </FormControl>
+                                      </FormItem>
+                                    );
+                                  }}
+                                />
+                              );
+                            })}
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+
               <FormMessage />
             </FormItem>
           );

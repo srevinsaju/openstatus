@@ -1,23 +1,21 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { Button } from "@openstatus/ui";
+import { Button } from "@openstatus/ui/src/components/button";
 
 import { Header } from "@/components/dashboard/header";
-import { MonitorForm } from "@/components/forms/monitor-form";
+import { MonitorForm } from "@/components/forms/monitor/form";
 import { StatusPageForm } from "@/components/forms/status-page/form";
 import { api } from "@/trpc/server";
 import { Description } from "./_components/description";
 
-// FIXME: uses legact MonitorForm and StatusPageForm
-
-export default async function Onboarding({
-  params,
-}: {
-  params: { workspaceSlug: string };
+export default async function Onboarding(props: {
+  params: Promise<{ workspaceSlug: string }>;
 }) {
+  const params = await props.params;
   const { workspaceSlug } = params;
 
+  const workspace = await api.workspace.getWorkspace.query();
   const allMonitors = await api.monitor.getMonitorsByWorkspace.query();
   const allPages = await api.page.getPagesByWorkspace.query();
   const allNotifications =
@@ -35,9 +33,14 @@ export default async function Onboarding({
             </Button>
           }
         />
-        <div className="grid h-full w-full gap-6 md:grid-cols-3 md:gap-8">
-          <div className="md:col-span-2">
-            <MonitorForm notifications={allNotifications} />
+        <div className="flex flex-1 flex-col gap-6 md:grid md:grid-cols-3 md:gap-8">
+          <div className="flex flex-col md:col-span-2">
+            <MonitorForm
+              notifications={allNotifications}
+              defaultSection="request"
+              limits={workspace.limits}
+              plan={workspace.plan}
+            />
           </div>
           <div className="hidden h-full md:col-span-1 md:block">
             <Description step="monitor" />
@@ -59,8 +62,8 @@ export default async function Onboarding({
             </Button>
           }
         />
-        <div className="grid h-full w-full gap-6 md:grid-cols-3 md:gap-8">
-          <div className="md:col-span-2">
+        <div className="flex flex-1 flex-col gap-6 md:grid md:grid-cols-3 md:gap-8">
+          <div className="flex flex-col md:col-span-2">
             <StatusPageForm
               {...{ workspaceSlug, allMonitors }}
               nextUrl={`/app/${workspaceSlug}/status-pages`}

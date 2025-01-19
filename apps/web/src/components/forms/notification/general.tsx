@@ -4,12 +4,8 @@ import { useMemo } from "react";
 import type { UseFormReturn } from "react-hook-form";
 
 import type {
-  InsertNotification,
+  InsertNotificationWithData,
   WorkspacePlan,
-} from "@openstatus/db/src/schema";
-import {
-  notificationProvider,
-  notificationProviderSchema,
 } from "@openstatus/db/src/schema";
 import {
   FormControl,
@@ -19,77 +15,59 @@ import {
   FormLabel,
   FormMessage,
   Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
 } from "@openstatus/ui";
 
-import { toCapitalize } from "@/lib/utils";
 import { SectionHeader } from "../shared/section-header";
-import { getProviderMetaData } from "./config";
+import { SectionDiscord } from "./provider/section-discord";
+import { SectionEmail } from "./provider/section-email";
+import { SectionOpsGenie } from "./provider/section-opsgenie";
+import { SectionPagerDuty } from "./provider/section-pagerduty";
+import { SectionSlack } from "./provider/section-slack";
+import { SectionSms } from "./provider/section-sms";
+
+const LABELS = {
+  slack: "Slack",
+  discord: "Discord",
+  sms: "SMS",
+  pagerduty: "PagerDuty",
+  opsgenie: "OpsGenie",
+  email: "Email",
+};
 
 interface Props {
-  form: UseFormReturn<InsertNotification>;
+  form: UseFormReturn<InsertNotificationWithData>;
   plan: WorkspacePlan;
 }
 
 export function General({ form, plan }: Props) {
   const watchProvider = form.watch("provider");
-  const providerMetaData = useMemo(
-    () => getProviderMetaData(watchProvider),
-    [watchProvider],
-  );
+
+  function renderProviderSection() {
+    switch (watchProvider) {
+      case "slack":
+        return <SectionSlack form={form} />;
+      case "discord":
+        return <SectionDiscord form={form} />;
+      case "sms":
+        return <SectionSms form={form} />;
+      case "pagerduty":
+        return <SectionPagerDuty form={form} plan={plan} />;
+      case "opsgenie":
+        return <SectionOpsGenie form={form} plan={plan} />;
+      case "email":
+        return <SectionEmail form={form} />;
+      default:
+        return <div>No provider selected</div>;
+    }
+  }
 
   return (
     <div className="grid gap-4 sm:grid-cols-3 sm:gap-6">
       <SectionHeader
         title="Alert"
-        description="Select the notification channels you want to be informed."
+        description={`Update your ${LABELS[watchProvider]} settings`}
       />
       <div className="grid gap-4 sm:col-span-2 sm:grid-cols-2">
-        <FormField
-          control={form.control}
-          name="provider"
-          render={({ field }) => (
-            <FormItem className="sm:col-span-1 sm:self-baseline">
-              <FormLabel>Provider</FormLabel>
-              <Select
-                onValueChange={(value) =>
-                  field.onChange(notificationProviderSchema.parse(value))
-                }
-                defaultValue={field.value}
-              >
-                <FormControl>
-                  <SelectTrigger className="capitalize">
-                    <SelectValue placeholder="Select Provider" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {notificationProvider.map((provider) => {
-                    const isIncluded =
-                      getProviderMetaData(provider).plans?.includes(plan);
-                    return (
-                      <SelectItem
-                        key={provider}
-                        value={provider}
-                        className="capitalize"
-                        disabled={!isIncluded}
-                      >
-                        {provider}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-              <FormDescription>
-                What channel/provider to send a notification.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
         <FormField
           control={form.control}
           name="name"
@@ -104,42 +82,7 @@ export function General({ form, plan }: Props) {
             </FormItem>
           )}
         />
-        {watchProvider && (
-          <FormField
-            control={form.control}
-            name="data"
-            render={({ field }) => (
-              <FormItem className="sm:col-span-full">
-                {/* make the first letter capital */}
-                <div className="flex items-center justify-between">
-                  <FormLabel>{toCapitalize(watchProvider)}</FormLabel>
-                </div>
-                <FormControl>
-                  <Input
-                    type={providerMetaData.dataType}
-                    placeholder={providerMetaData.placeholder}
-                    {...field}
-                    disabled={!providerMetaData.plans?.includes(plan)}
-                  />
-                </FormControl>
-                <FormDescription className="flex items-center justify-between">
-                  The data required.
-                  {providerMetaData.setupDocLink && (
-                    <a
-                      href={providerMetaData.setupDocLink}
-                      target="_blank"
-                      className="underline hover:no-underline"
-                      rel="noreferrer"
-                    >
-                      How to setup your {toCapitalize(watchProvider)} webhook
-                    </a>
-                  )}
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
+        {renderProviderSection()}
       </div>
     </div>
   );

@@ -1,28 +1,19 @@
-import { z } from "zod";
-
 import { Alert, AlertDescription, AlertTitle, Separator } from "@openstatus/ui";
 
 import { Icons } from "@/components/icons";
 import { api } from "@/trpc/server";
 import { LinkCards } from "./_components/link-cards";
+import { searchParamsCache } from "./search-params";
 
 const AlertTriangle = Icons["alert-triangle"];
 
-/**
- * allowed URL search params
- */
-const searchParamsSchema = z.object({
-  token: z.string(),
-});
-
-export default async function InvitePage({
-  searchParams,
-}: {
-  searchParams: { [key: string]: string | string[] | undefined };
+export default async function InvitePage(props: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const search = searchParamsSchema.safeParse(searchParams);
-  const { message, data } = search.success
-    ? await api.invitation.acceptInvitation.mutate({ token: search.data.token })
+  const searchParams = await props.searchParams;
+  const { token } = searchParamsCache.parse(searchParams);
+  const { message, data } = token
+    ? await api.invitation.acceptInvitation.mutate({ token })
     : { message: "Unavailable invitation token.", data: undefined };
 
   const workspace = await api.workspace.getWorkspace.query();
@@ -30,7 +21,7 @@ export default async function InvitePage({
   if (!data) {
     return (
       <div className="mx-auto flex h-full max-w-xl flex-1 flex-col items-center justify-center gap-4">
-        <h1 className="text-2xl font-semibold">Invitation</h1>
+        <h1 className="font-semibold text-2xl">Invitation</h1>
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Something went wrong</AlertTitle>
@@ -45,7 +36,7 @@ export default async function InvitePage({
 
   return (
     <div className="mx-auto flex h-full max-w-xl flex-1 flex-col items-center justify-center gap-4">
-      <h1 className="text-2xl font-semibold">Invitation</h1>
+      <h1 className="font-semibold text-2xl">Invitation</h1>
       <Alert>
         <Icons.check className="h-4 w-4" />
         <AlertTitle>Ready to go</AlertTitle>

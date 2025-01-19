@@ -21,8 +21,11 @@ import {
   TableRow,
 } from "@openstatus/ui";
 
+import { PricingSlider } from "../marketing/pricing/pricing-slider";
 import type { MetricsCardProps } from "../monitor-dashboard/metrics-card";
 import { MetricsCard } from "../monitor-dashboard/metrics-card";
+import { Callout, type CalloutProps } from "./callout";
+import Pre from "./pre";
 import type { SimpleChartProps } from "./simple-chart";
 import { SimpleChart } from "./simple-chart";
 
@@ -64,10 +67,20 @@ export const components = {
       </div>
     );
   },
+  PricingSlider: () => {
+    return <PricingSlider />;
+  },
   SimpleChart: (props: SimpleChartProps) => {
     return (
       <div className="not-prose">
         <SimpleChart {...props} />
+      </div>
+    );
+  },
+  Callout: (props: CalloutProps) => {
+    return (
+      <div className="not-prose my-5">
+        <Callout {...props} />
       </div>
     );
   },
@@ -88,4 +101,6 @@ export const components = {
   td: (props: TdHTMLAttributes<HTMLTableCellElement>) => (
     <TableCell {...props} />
   ),
+  // FIXME: file duplication (not related to content-collections)
+  pre: (props: HTMLAttributes<HTMLPreElement>) => <Pre {...props} />,
 };

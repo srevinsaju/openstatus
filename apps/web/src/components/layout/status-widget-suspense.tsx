@@ -3,13 +3,13 @@ import { Suspense } from "react";
 
 import type { StatusWidgetProps } from "@openstatus/react";
 import { StatusWidget } from "@openstatus/react";
+import { Button } from "@openstatus/ui/src/components/button";
 import {
-  Button,
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@openstatus/ui";
+} from "@openstatus/ui/src/components/tooltip";
 
 export function StatusWidgetFallback() {
   return (
@@ -34,7 +34,7 @@ export function StatusWidgetContainer(props: StatusWidgetProps) {
             <Button variant="link" size="sm" asChild>
               <a
                 target="_blank"
-                href="https://docs.openstatus.dev/packages/react"
+                href="https://docs.openstatus.dev/tools/react/"
                 rel="noreferrer"
               >
                 Install your own <ExternalLink className="ml-1 h-3 w-3" />

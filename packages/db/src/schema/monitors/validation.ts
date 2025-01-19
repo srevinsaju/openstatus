@@ -3,22 +3,13 @@ import { z } from "zod";
 
 import * as assertions from "@openstatus/assertions";
 
-import {
-  flyRegions,
-  monitorJobTypes,
-  monitorMethods,
-  monitorPeriodicity,
-  monitorRegions,
-  monitorStatus,
-} from "./constants";
+import { monitorPeriodicitySchema, monitorRegionSchema } from "../constants";
+import { monitorJobTypes, monitorMethods, monitorStatus } from "./constants";
 import { monitor, monitorsToPages } from "./monitor";
 
-export const monitorPeriodicitySchema = z.enum(monitorPeriodicity);
 export const monitorMethodsSchema = z.enum(monitorMethods);
 export const monitorStatusSchema = z.enum(monitorStatus);
-export const monitorRegionSchema = z.enum(monitorRegions);
 export const monitorJobTypesSchema = z.enum(monitorJobTypes);
-export const monitorFlyRegionSchema = z.enum(flyRegions);
 
 // TODO: shared function
 // biome-ignore lint/correctness/noUnusedVariables: <explanation>
@@ -52,11 +43,13 @@ const headersToArraySchema = z.preprocess(
 export const selectMonitorSchema = createSelectSchema(monitor, {
   periodicity: monitorPeriodicitySchema.default("10m"),
   status: monitorStatusSchema.default("active"),
-  jobType: monitorJobTypesSchema.default("other"),
+  jobType: monitorJobTypesSchema.default("http"),
+  timeout: z.number().default(45),
   regions: regionsToArraySchema.default([]),
 }).extend({
   headers: headersToArraySchema.default([]),
   body: bodyToStringSchema.default(""),
+  // for tcp monitors the method is not needed
   method: monitorMethodsSchema.default("GET"),
 });
 
@@ -65,8 +58,11 @@ const headersSchema = z
   .optional();
 
 export const insertMonitorSchema = createInsertSchema(monitor, {
+  name: z
+    .string()
+    .min(1, "Name must be at least 1 character long")
+    .max(255, "Name must be at most 255 characters long"),
   periodicity: monitorPeriodicitySchema.default("10m"),
-  url: z.string().url(), // find a better way to not always start with "https://" including the `InputWithAddons`
   status: monitorStatusSchema.default("active"),
   regions: z.array(monitorRegionSchema).default([]).optional(),
   headers: headersSchema.default([]),
@@ -78,6 +74,9 @@ export const insertMonitorSchema = createInsertSchema(monitor, {
   tags: z.array(z.number()).optional().default([]),
   statusAssertions: z.array(assertions.statusAssertion).optional(),
   headerAssertions: z.array(assertions.headerAssertion).optional(),
+  textBodyAssertions: z.array(assertions.textBodyAssertion).optional(),
+  timeout: z.coerce.number().gte(0).lte(60000).default(45000),
+  degradedAfter: z.coerce.number().gte(0).lte(60000).nullish(),
 });
 
 export const selectMonitorToPageSchema = createSelectSchema(monitorsToPages);
@@ -89,5 +88,4 @@ export type MonitorStatus = z.infer<typeof monitorStatusSchema>;
 export type MonitorPeriodicity = z.infer<typeof monitorPeriodicitySchema>;
 export type MonitorMethod = z.infer<typeof monitorMethodsSchema>;
 export type MonitorRegion = z.infer<typeof monitorRegionSchema>;
-export type MonitorFlyRegion = z.infer<typeof monitorFlyRegionSchema>;
 export type MonitorJobType = z.infer<typeof monitorJobTypesSchema>;

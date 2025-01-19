@@ -24,7 +24,6 @@ import { TagsMultiBox } from "./tags-multi-box";
 
 interface Props {
   form: UseFormReturn<InsertMonitor>;
-  plan: WorkspacePlan;
   tags?: MonitorTag[];
 }
 
@@ -84,7 +83,7 @@ export function General({ form, tags }: Props) {
                   />
                 </FormControl>
                 <FormDescription>
-                  Easily categorize your monitors.
+                  Categorize your monitors. Create new tags by typing a name.
                 </FormDescription>
                 <FormMessage />
               </FormItem>
