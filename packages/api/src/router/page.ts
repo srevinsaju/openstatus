@@ -252,17 +252,14 @@ export const pageRouter = createTRPCRouter({
         });
         const newDomain = input.customDomain;
 
-        if (newDomain && !oldDomain) {
+        // unchanged saves must be a no-op — re-adding an existing domain fails on Vercel
+        if (newDomain === oldDomain) return;
+
+        if (newDomain) {
           await addDomainToVercel(newDomain);
-        } else if (oldDomain && newDomain && newDomain !== oldDomain) {
-          await addDomainToVercel(newDomain);
+        }
+        if (oldDomain) {
           await removeDomainFromVercel(oldDomain);
-        } else if (oldDomain && newDomain === "") {
-          await removeDomainFromVercel(oldDomain);
-        } else if (newDomain) {
-          await addDomainToVercel(newDomain);
-        } else {
-          return;
         }
 
         await updatePageCustomDomain({
