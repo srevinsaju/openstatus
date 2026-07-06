@@ -13,6 +13,7 @@ import {
 } from "./blocks";
 import { findByThread, replace, store } from "./confirmation-store";
 import type { PendingPayload } from "./confirmation-store";
+import { publishHomeView } from "./home";
 import { getComponentNames, getPageDashboardLink } from "./page-urls";
 import { getRegistryTool, isSlackToolDraft } from "./registry-runner";
 import { resolveWorkspace } from "./workspace-resolver";
@@ -51,6 +52,7 @@ const slackEventSchema = z.object({
       ts: z.string().optional(),
       thread_ts: z.string().optional(),
       bot_id: z.string().optional(),
+      tab: z.string().optional(),
     })
     .optional(),
   event_id: z.string().optional(),
@@ -138,6 +140,21 @@ async function processEvent(body: SlackEvent) {
     return;
   }
 
+  if (event.type === "app_home_opened") {
+    if (event.tab && event.tab !== "home") return;
+    const teamId = body.team_id;
+    const userId = event.user;
+    if (!teamId || !userId) return;
+    const resolved = await resolveWorkspace(teamId);
+    if (!resolved) return;
+    try {
+      await publishHomeView(new WebClient(resolved.botToken), userId);
+    } catch (err) {
+      logger.error("slack failed to publish home view", { error: err, teamId });
+    }
+    return;
+  }
+
   if (event.type !== "app_mention" && event.type !== "message") return;
   if (event.type === "message" && event.bot_id) return;
 
@@ -163,8 +180,8 @@ async function processEvent(body: SlackEvent) {
   const botUserId = resolved.botUserId;
   const threadTs = event.thread_ts ?? event.ts;
 
-  if (event.type === "message" && event.channel_type !== "im") {
-    if (!event.text?.includes(`<@${botUserId}>`)) return;
+  if (event.type === "message" && !event.text?.includes(`<@${botUserId}>`)) {
+    return;
   }
 
   logger.info("slack event received", {
