@@ -56,6 +56,10 @@ export const config: Record<
         value: "white-label",
         label: "White Label",
       },
+      {
+        value: "custom-theme",
+        label: "Custom Theme",
+      },
     ],
   },
   "status-page-audience": {

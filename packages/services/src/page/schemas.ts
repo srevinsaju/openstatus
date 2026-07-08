@@ -6,7 +6,13 @@ import {
   slugSchema,
 } from "@openstatus/db/src/schema/pages/validation";
 import { locales } from "@openstatus/locales";
-import { THEME_KEYS, type ThemeKey } from "@openstatus/theme-store";
+import {
+  hasCustomTheme,
+  sanitizeCustomTheme,
+  THEME_KEYS,
+  type ThemeKey,
+  validateCustomTheme,
+} from "@openstatus/theme-store";
 import { z } from "zod";
 
 export { pageAccessTypes };
@@ -138,6 +144,36 @@ export const UpdatePageAppearanceInput = z.object({
 });
 export type UpdatePageAppearanceInput = z.infer<
   typeof UpdatePageAppearanceInput
+>;
+
+const themeVarsInput = z.record(z.string(), z.string());
+
+export const UpdatePageCustomThemeInput = z.object({
+  id: z.number().int(),
+  // Validated + sanitized at the boundary: only supported var names and
+  // values that can't break out of the inline <style> tag the status page
+  // renders them into. Empty / nullish input clears the column.
+  customTheme: z
+    .object({
+      light: themeVarsInput.optional(),
+      dark: themeVarsInput.optional(),
+    })
+    .superRefine((value, ctx) => {
+      const result = validateCustomTheme(value);
+      if (!result.valid) {
+        for (const message of result.errors) {
+          ctx.addIssue({ code: "custom", message });
+        }
+      }
+    })
+    .nullish()
+    .transform((v) => {
+      if (v == null || !hasCustomTheme(v)) return null;
+      return sanitizeCustomTheme(v);
+    }),
+});
+export type UpdatePageCustomThemeInput = z.input<
+  typeof UpdatePageCustomThemeInput
 >;
 
 export const UpdatePageLinksInput = z.object({
