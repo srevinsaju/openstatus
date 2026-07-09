@@ -27,6 +27,7 @@ import {
 import type {
   ComponentDayBucket,
   ComponentEvent,
+  CustomTheme,
   GetPageComponentDailySummaryResponse,
   PageComponentDailySummary,
   StatusPageService,
@@ -50,6 +51,7 @@ import {
   listPages,
   updatePageAppearance,
   updatePageCustomDomain,
+  updatePageCustomTheme,
   updatePageGeneral,
   updatePageLinks,
   updatePageLocales,
@@ -64,7 +66,11 @@ import {
   upsertSelfSignupSubscriber,
 } from "@openstatus/services/page-subscriber";
 import { getChannel } from "@openstatus/subscriptions";
-import { THEME_KEYS, type ThemeKey } from "@openstatus/theme-store";
+import {
+  THEME_KEYS,
+  type ThemeKey,
+  validateCustomTheme,
+} from "@openstatus/theme-store";
 
 import { toConnectError, toServiceCtx } from "../../adapter";
 import { getRpcContext } from "../../interceptors";
@@ -107,6 +113,7 @@ import {
 } from "./errors";
 import {
   checkCustomDomainLimit,
+  checkCustomThemeLimit,
   checkEmailDomainProtectionLimit,
   checkIpRestrictionLimit,
   checkNoIndexLimit,
@@ -242,6 +249,24 @@ function validateAllowedIpRanges(ranges: string): string[] {
     normalized.push(value);
   }
   return normalized;
+}
+
+// Proto map values arrive unvalidated; check var names / safe values at the
+// handler so callers get a readable InvalidArgument instead of the service's
+// raw zod message.
+function validateProtoCustomTheme(customTheme: CustomTheme): {
+  light: Record<string, string>;
+  dark: Record<string, string>;
+} {
+  const input = {
+    light: { ...customTheme.light },
+    dark: { ...customTheme.dark },
+  };
+  const result = validateCustomTheme(input);
+  if (!result.valid) {
+    throw new ConnectError(result.errors.join(" "), Code.InvalidArgument);
+  }
+  return input;
 }
 
 /**
@@ -397,6 +422,12 @@ export const statusPageServiceImpl: ServiceImpl<typeof StatusPageService> = {
         checkNoIndexLimit(limits);
       }
 
+      let customTheme: ReturnType<typeof validateProtoCustomTheme> | undefined;
+      if (req.customTheme !== undefined) {
+        checkCustomThemeLimit(limits);
+        customTheme = validateProtoCustomTheme(req.customTheme);
+      }
+
       // `published` relies on DB default (false). The service's
       // CreatePageInput type doesn't surface the column, and its behavior
       // matches the legacy `published: false` write on create.
@@ -425,6 +456,7 @@ export const statusPageServiceImpl: ServiceImpl<typeof StatusPageService> = {
           defaultLocale,
           locales,
           allowIndex,
+          customTheme,
         },
       }).catch((err) => {
         // Same handler-layer remap as the `i18n` pre-check above —
@@ -639,6 +671,16 @@ export const statusPageServiceImpl: ServiceImpl<typeof StatusPageService> = {
         req.customDomain !== undefined ? req.customDomain : undefined;
       const accessChanged = hasAccessType || hasAllowIndex;
 
+      // Omitted = keep; empty message = clear (the service maps an empty
+      // var set to null).
+      let customThemeForUpdate:
+        | ReturnType<typeof validateProtoCustomTheme>
+        | undefined;
+      if (req.customTheme !== undefined) {
+        checkCustomThemeLimit(limits);
+        customThemeForUpdate = validateProtoCustomTheme(req.customTheme);
+      }
+
       // Wrap all per-section updates in a single transaction so partial
       // failures don't leave the page in a half-updated state. Each
       // per-section service call's internal `withTransaction` detects
@@ -731,6 +773,13 @@ export const statusPageServiceImpl: ServiceImpl<typeof StatusPageService> = {
           await updatePageCustomDomain({
             ctx: txCtx,
             input: { id: pageId, customDomain: customDomainForUpdate },
+          });
+        }
+
+        if (customThemeForUpdate !== undefined) {
+          await updatePageCustomTheme({
+            ctx: txCtx,
+            input: { id: pageId, customTheme: customThemeForUpdate },
           });
         }
 
