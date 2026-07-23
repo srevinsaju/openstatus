@@ -1,5 +1,6 @@
 "use client";
 
+import { More, Add } from "@openstatus/icons";
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -19,7 +20,6 @@ import {
 } from "@openstatus/ui/components/ui/tooltip";
 import { cn } from "@openstatus/ui/lib/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { MoreHorizontal, Plus } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -93,7 +93,7 @@ export function NavStatusPages() {
                     setOpenMobile(false);
                   }}
                 >
-                  <Plus className="text-muted-foreground" />
+                  <Add className="text-muted-foreground" />
                   <span className="sr-only">Create Status Page</span>
                 </SidebarMenuAction>
               </TooltipTrigger>
@@ -171,7 +171,7 @@ export function NavStatusPages() {
                   align={isMobile ? "end" : "start"}
                 >
                   <SidebarMenuAction showOnHover>
-                    <MoreHorizontal />
+                    <More />
                     <span className="sr-only">More</span>
                   </SidebarMenuAction>
                 </QuickActions>

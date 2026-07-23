@@ -1,8 +1,8 @@
 "use client";
 
 import type { RouterOutputs } from "@openstatus/api";
+import { Monitor, StatusPage, Launch } from "@openstatus/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Activity, PanelTop, Rocket } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useQueryStates } from "nuqs";
 import { generateSlug } from "random-word-slugs";
@@ -31,9 +31,9 @@ export type OnboardingPage = Pick<
 >;
 
 const STEPS = [
-  { id: "1", label: "Monitor", icon: <Activity /> },
-  { id: "2", label: "Status page", icon: <PanelTop /> },
-  { id: "3", label: "Launch", icon: <Rocket /> },
+  { id: "1", label: "Monitor", icon: <Monitor /> },
+  { id: "2", label: "Status page", icon: <StatusPage /> },
+  { id: "3", label: "Launch", icon: <Launch /> },
 ] as const;
 
 // Fallback URL used when the user's email domain is generic (gmail, yahoo, …).

@@ -1,5 +1,6 @@
 "use client";
 
+import { Expand, Add } from "@openstatus/icons";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,7 +17,6 @@ import {
 } from "@openstatus/ui/components/ui/sidebar";
 import { cn } from "@openstatus/ui/lib/utils";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronsUpDown, Plus } from "lucide-react";
 
 import { Link } from "@/components/common/link";
 import { useTRPC } from "@/lib/trpc/client";
@@ -68,7 +68,7 @@ export function WorkspaceSwitcher({ className, side }: WorkspaceSwitcherProps) {
                   </span>
                 </div>
               </div>
-              <ChevronsUpDown className="ml-auto" />
+              <Expand className="ml-auto" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -100,7 +100,7 @@ export function WorkspaceSwitcher({ className, side }: WorkspaceSwitcherProps) {
             <DropdownMenuSeparator />
             <DropdownMenuItem className="gap-2 p-2" asChild>
               <Link href="/settings/general">
-                <Plus />
+                <Add />
                 <div className="font-commit-mono text-muted-foreground tracking-tight">
                   Add team member
                 </div>

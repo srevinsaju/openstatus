@@ -1127,6 +1127,9 @@ importers:
       '@openstatus/error':
         specifier: workspace:*
         version: link:../../packages/error
+      '@openstatus/icons':
+        specifier: workspace:*
+        version: link:../../packages/icons
       '@openstatus/locales':
         specifier: workspace:*
         version: link:../../packages/locales
@@ -2061,6 +2064,9 @@ importers:
 
   packages/icons:
     dependencies:
+      lucide-react:
+        specifier: 'catalog:'
+        version: 0.525.0(react@19.2.6)
       react:
         specifier: 'catalog:'
         version: 19.2.6

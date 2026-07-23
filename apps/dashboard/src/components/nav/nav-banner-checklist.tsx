@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowUpRight, Success, Pending, Close } from "@openstatus/icons";
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -8,7 +9,6 @@ import {
   SidebarMenuItem,
 } from "@openstatus/ui/components/ui/sidebar";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowUpRight, CircleCheck, CircleDashed, X } from "lucide-react";
 
 import { Link } from "@/components/common/link";
 import { useTRPC } from "@/lib/trpc/client";
@@ -77,7 +77,7 @@ export function NavBannerChecklist({
           className="relative top-0 right-0"
           onClick={handleClose}
         >
-          <X className="text-muted-foreground" size={16} />
+          <Close className="text-muted-foreground" size={16} />
         </SidebarMenuAction>
       </SidebarGroupLabel>
       <SidebarMenu>
@@ -88,12 +88,12 @@ export function NavBannerChecklist({
           >
             {item.checked ? (
               <>
-                <CircleCheck className="text-success shrink-0" size={12} />
+                <Success className="text-success shrink-0" size={12} />
                 <span>{item.title}</span>
               </>
             ) : (
               <>
-                <CircleDashed
+                <Pending
                   className="text-muted-foreground/50 shrink-0"
                   size={12}
                 />

@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronDown, Add } from "@openstatus/icons";
 import { Button } from "@openstatus/ui/components/ui/button";
 import { ButtonGroup } from "@openstatus/ui/components/ui/button-group";
 import {
@@ -8,7 +9,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@openstatus/ui/components/ui/dropdown-menu";
-import { ChevronDown, Plus } from "lucide-react";
 import { useState } from "react";
 
 import { FormSheetMaintenanceCreate } from "@/components/forms/maintenance/sheet-create";
@@ -22,7 +22,7 @@ export function CreateEventButtonGroup() {
       <ButtonGroup>
         <FormSheetStatusReportCreate>
           <Button data-section="action" variant="outline" size="sm">
-            <Plus />
+            <Add />
             Create Status Report
           </Button>
         </FormSheetStatusReportCreate>
@@ -39,7 +39,7 @@ export function CreateEventButtonGroup() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onSelect={() => setMaintenanceOpen(true)}>
-              <Plus className="text-muted-foreground" />
+              <Add className="text-muted-foreground" />
               Create Maintenance
             </DropdownMenuItem>
           </DropdownMenuContent>

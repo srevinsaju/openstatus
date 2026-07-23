@@ -1,18 +1,18 @@
 import {
+  Download,
+  FileJson,
+  ApiKey as KeyIcon,
+  Login,
+  Report,
+  StatusPage,
+  Terminal,
+} from "@openstatus/icons";
+import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
 } from "@openstatus/ui/components/ui/tabs";
-import {
-  FileDown,
-  FileJson,
-  Key,
-  LogIn,
-  Megaphone,
-  PanelTop,
-  Terminal,
-} from "lucide-react";
 import React from "react";
 
 import { Code } from "@/components/common/code";
@@ -48,13 +48,13 @@ const installs = [
   },
   {
     title: "Login",
-    icon: LogIn,
+    icon: Login,
     description: "Save your API token for use in subsequent commands.",
     command: "openstatus login",
   },
   {
     title: "Add API Key",
-    icon: Key,
+    icon: KeyIcon,
     description: (
       <>
         Or set it as an environment variable. Create an API key in your
@@ -69,19 +69,19 @@ const installs = [
   },
   {
     title: "List Status Pages",
-    icon: PanelTop,
+    icon: StatusPage,
     description: "List all status pages in your workspace.",
     command: "openstatus status-page list",
   },
   {
     title: "List Status Reports",
-    icon: Megaphone,
+    icon: Report,
     description: "List all status reports in your workspace.",
     command: "openstatus status-report list",
   },
   {
     title: "Import Monitors",
-    icon: FileDown,
+    icon: Download,
     description: "Import monitors from your workspace to a YAML file.",
     command: "openstatus monitors import",
   },

@@ -13,6 +13,7 @@ import {
   textBodyAssertion,
 } from "@openstatus/assertions";
 import { monitorMethods } from "@openstatus/db/src/schema";
+import { Globe, Network, Add, Server, Close } from "@openstatus/icons";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -54,7 +55,6 @@ import {
 } from "@openstatus/ui/components/ui/tooltip";
 import { cn } from "@openstatus/ui/lib/utils";
 import { isTRPCClientError } from "@trpc/client";
-import { Globe, Network, Plus, Server, X } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -426,7 +426,7 @@ export function FormGeneral({
                               field.onChange(newHeaders);
                             }}
                           >
-                            <X />
+                            <Close />
                           </Button>
                         </div>
                       ))}
@@ -442,7 +442,7 @@ export function FormGeneral({
                             ]);
                           }}
                         >
-                          <Plus />
+                          <Add />
                           Add Header
                         </Button>
                       </div>
@@ -604,7 +604,7 @@ export function FormGeneral({
                               field.onChange(newAssertions);
                             }}
                           >
-                            <X />
+                            <Close />
                           </Button>
                         </div>
                       ))}
@@ -627,7 +627,7 @@ export function FormGeneral({
                             ]);
                           }}
                         >
-                          <Plus />
+                          <Add />
                           Add Status Assertion
                         </Button>
                         <Button
@@ -649,7 +649,7 @@ export function FormGeneral({
                             ]);
                           }}
                         >
-                          <Plus />
+                          <Add />
                           Add Header Assertion
                         </Button>
                         <Button
@@ -670,7 +670,7 @@ export function FormGeneral({
                             ]);
                           }}
                         >
-                          <Plus />
+                          <Add />
                           Add Body Assertion
                         </Button>
                       </div>
@@ -890,7 +890,7 @@ export function FormGeneral({
                               field.onChange(newAssertions);
                             }}
                           >
-                            <X />
+                            <Close />
                           </Button>
                         </div>
                       ))}
@@ -914,7 +914,7 @@ export function FormGeneral({
                             ]);
                           }}
                         >
-                          <Plus />
+                          <Add />
                           Add DNS Record Assertion
                         </Button>
                       </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import type { IconType } from "@openstatus/icons";
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -8,7 +9,6 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@openstatus/ui/components/ui/sidebar";
-import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -24,7 +24,7 @@ export function NavOverview({
   items: {
     name: string;
     url: string;
-    icon: LucideIcon;
+    icon: IconType;
   }[];
 }) {
   const pathname = usePathname();

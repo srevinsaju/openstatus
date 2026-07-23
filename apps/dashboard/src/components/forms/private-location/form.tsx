@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Add, Check, Close, Copy } from "@openstatus/icons";
 import { Button } from "@openstatus/ui/components/ui/button";
 import {
   Form,
@@ -21,7 +22,6 @@ import {
 import { useCopyToClipboard } from "@openstatus/ui/hooks/use-copy-to-clipboard";
 import { cn } from "@openstatus/ui/lib/utils";
 import { isTRPCClientError } from "@trpc/client";
-import { Check, Copy, Plus, X } from "lucide-react";
 import React, { useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -252,7 +252,7 @@ export function FormPrivateLocation({
                         );
                       }}
                     >
-                      <X />
+                      <Close />
                     </Button>
                   </div>
                 ))}
@@ -266,7 +266,7 @@ export function FormPrivateLocation({
                       field.onChange([...field.value, { key: "", value: "" }]);
                     }}
                   >
-                    <Plus />
+                    <Add />
                     Add Metadata
                   </Button>
                 </div>

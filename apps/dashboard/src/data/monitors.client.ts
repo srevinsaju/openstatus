@@ -1,12 +1,12 @@
 import {
-  Cog,
+  Settings,
   Copy,
-  CopyPlus,
+  Duplicate,
   Globe,
   Network,
   Server,
-  Trash2,
-} from "lucide-react";
+  Delete,
+} from "@openstatus/icons";
 
 export const monitorTypes = [
   {
@@ -30,7 +30,7 @@ export const actions = [
   {
     id: "edit",
     label: "Settings",
-    icon: Cog,
+    icon: Settings,
     variant: "default" as const,
   },
   {
@@ -42,7 +42,7 @@ export const actions = [
   {
     id: "clone",
     label: "Clone",
-    icon: CopyPlus,
+    icon: Duplicate,
     variant: "default" as const,
   },
   // {
@@ -54,7 +54,7 @@ export const actions = [
   {
     id: "delete",
     label: "Delete",
-    icon: Trash2,
+    icon: Delete,
     variant: "destructive" as const,
   },
 ] as const;

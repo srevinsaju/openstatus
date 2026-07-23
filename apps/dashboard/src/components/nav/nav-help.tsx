@@ -1,5 +1,6 @@
 "use client";
 
+import { Help } from "@openstatus/icons";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,7 +16,6 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@openstatus/ui/components/ui/sidebar";
-import { HelpCircle } from "lucide-react";
 import Link from "next/link";
 
 import { FormDialogSupportContact } from "@/components/forms/support-contact/dialog";
@@ -34,7 +34,7 @@ export function NavHelp() {
                   className="font-commit-mono tracking-tight"
                   tooltip="Get Help"
                 >
-                  <HelpCircle />
+                  <Help />
                   <span>Get Help</span>
                 </SidebarMenuButton>
               </DropdownMenuTrigger>

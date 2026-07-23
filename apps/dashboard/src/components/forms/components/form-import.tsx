@@ -1,11 +1,12 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Warning } from "@openstatus/icons";
 import {
   BetterstackIcon,
   InstatusIcon,
   StatuspageIcon,
-} from "@openstatus/icons";
+} from "@openstatus/icons/brand";
 import type { ImportSummary } from "@openstatus/importers/types";
 import { Badge } from "@openstatus/ui/components/ui/badge";
 import { Button } from "@openstatus/ui/components/ui/button";
@@ -26,7 +27,6 @@ import {
 import { Switch } from "@openstatus/ui/components/ui/switch";
 import { useMutation } from "@tanstack/react-query";
 import { isTRPCClientError } from "@trpc/client";
-import { AlertTriangle } from "lucide-react";
 import { useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -379,7 +379,7 @@ export function FormImport({
                 </div>
                 {previewMutation.data.errors.length > 0 ? (
                   <Note color="error" size="sm">
-                    <AlertTriangle />
+                    <Warning />
                     <p className="text-sm">
                       {previewMutation.data.errors.join(" ")}
                     </p>
