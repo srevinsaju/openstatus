@@ -1,12 +1,4 @@
-import {
-  AtSign,
-  KeyRound,
-  Palette,
-  Pencil,
-  Plus,
-  Trash2,
-  Users,
-} from "lucide-react";
+import { AtSign, KeyRound, Palette, Pencil, Plus, Users } from "lucide-react";
 import type * as React from "react";
 
 import { MONITOR_TABS } from "@/app/(dashboard)/monitors/[id]/constants";
@@ -112,11 +104,6 @@ const SETTINGS_ANCHORS: CommandLink[] = [
     href: "/settings/account#appearance",
     icon: Palette,
     keywords: ["theme", "dark mode"],
-  },
-  {
-    label: "Delete Account",
-    href: "/settings/account#delete-account",
-    icon: Trash2,
   },
 ];
 
