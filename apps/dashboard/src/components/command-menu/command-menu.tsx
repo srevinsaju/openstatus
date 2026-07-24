@@ -1,11 +1,9 @@
 "use client";
 
-import { Close, Dark, Light, Search } from "@openstatus/icons";
+import { Close, Search } from "@openstatus/icons";
 import {
   Command,
   CommandEmpty,
-  CommandGroup,
-  CommandItem,
   CommandList,
   CommandLoading,
 } from "@openstatus/ui/components/ui/command";
@@ -14,94 +12,61 @@ import {
   DialogContent,
   DialogTitle,
 } from "@openstatus/ui/components/ui/dialog";
-import { useQuery } from "@tanstack/react-query";
 import { Command as CommandPrimitive } from "cmdk";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 
 import { FormSheetMaintenanceCreate } from "@/components/forms/maintenance/sheet-create";
+import { FormSheetStatusReportUpdateCreate } from "@/components/forms/status-report-update/sheet-create";
 import { FormSheetStatusReportCreate } from "@/components/forms/status-report/sheet-create";
 import { FormDialogSupportContact } from "@/components/forms/support-contact/dialog";
 import { scrollToHash, useScrollToHash } from "@/hooks/use-scroll-to-hash";
-import { useTRPC } from "@/lib/trpc/client";
 import { switchWorkspace } from "@/lib/workspace-cookie";
 
+import { GroupView } from "./group-view";
 import {
-  type CommandLink,
-  type CommandPage,
-  type CommandSheetAction,
-  CREATE_ACTIONS,
-  CREATE_LINKS,
-  HELP_LINK_ITEMS,
-  HELP_SUPPORT_ACTION,
-  MONITOR_ACTIONS,
-  NAVIGATION,
-  SETTINGS,
-  STATUS_PAGE_ACTIONS,
-} from "./config";
+  maintenancesGroup,
+  monitorsGroup,
+  statusPagesGroup,
+  statusReportsGroup,
+  workspacesGroup,
+} from "./groups/entities";
+import { monitorScopeGroups } from "./groups/monitor-scope";
+import {
+  createGroup,
+  helpGroup,
+  navigationGroup,
+  settingsGroup,
+  themeGroup,
+} from "./groups/static";
+import { statusPageScopeGroups } from "./groups/status-page-scope";
 import { useCommandMenu } from "./provider";
-
-type ActiveSheet = CommandSheetAction["sheet"] | null;
-
-const IDLE_CAP = 5;
-
-function LinkItem({
-  item,
-  onSelect,
-}: {
-  item: CommandLink;
-  onSelect: (item: CommandLink) => void;
-}) {
-  return (
-    <CommandItem
-      value={item.label}
-      keywords={item.keywords}
-      onSelect={() => onSelect(item)}
-    >
-      <item.icon />
-      <span>{item.label}</span>
-    </CommandItem>
-  );
-}
-
-function ActionItem({
-  action,
-  onSelect,
-}: {
-  action: CommandSheetAction;
-  onSelect: () => void;
-}) {
-  return (
-    <CommandItem
-      value={action.label}
-      keywords={action.keywords}
-      onSelect={onSelect}
-    >
-      <action.icon />
-      <span>{action.label}</span>
-    </CommandItem>
-  );
-}
+import type {
+  CommandAction,
+  CommandMenuGroup,
+  CommandPage,
+  CommandSheet,
+} from "./types";
+import { pageLabel } from "./types";
+import { useCommandMenuData } from "./use-command-menu-data";
 
 export function CommandMenu() {
   const { open, setOpen } = useCommandMenu();
   const [search, setSearch] = React.useState("");
   const [pages, setPages] = React.useState<CommandPage[]>([]);
-  const [activeSheet, setActiveSheet] = React.useState<ActiveSheet>(null);
+  const [activeSheet, setActiveSheet] = React.useState<CommandSheet | null>(
+    null,
+  );
   const [mounted, setMounted] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
   const router = useRouter();
   const { resolvedTheme, setTheme } = useTheme();
-  const trpc = useTRPC();
 
   useScrollToHash();
 
-  const { data: monitors } = useQuery(trpc.monitor.list.queryOptions());
-  const { data: statusPages } = useQuery(trpc.page.list.queryOptions());
-  const { data: workspaces } = useQuery(trpc.workspace.list.queryOptions());
-  const { data: workspace } = useQuery(trpc.workspace.get.queryOptions());
+  const data = useCommandMenuData({ open });
 
   const page = pages.length > 0 ? pages[pages.length - 1] : null;
 
@@ -143,27 +108,60 @@ export function CommandMenu() {
     if (hashIndex !== -1) scrollToHash(href.slice(hashIndex + 1));
   };
 
-  const selectLink = (item: CommandLink) => {
-    if (item.external) {
-      window.open(item.href, "_blank", "noreferrer");
-      setOpen(false);
-      return;
-    }
-    navigate(item.href);
-  };
-
-  const openSheet = (sheet: Exclude<ActiveSheet, null>) => {
+  const openSheet = (next: CommandSheet) => {
     setOpen(false);
     // Defer so the palette Dialog releases focus + scroll lock before the
     // sheet/dialog claims them — otherwise Radix layers fight during overlap.
-    setTimeout(() => setActiveSheet(sheet), 0);
+    setTimeout(() => setActiveSheet(next), 0);
   };
 
-  const idleCap = <T,>(items: T[]) =>
-    search ? items : items.slice(0, IDLE_CAP);
+  const dispatch = (action: CommandAction) => {
+    switch (action.type) {
+      case "navigate":
+        navigate(action.href);
+        break;
+      case "external":
+        window.open(action.href, "_blank", "noreferrer");
+        setOpen(false);
+        break;
+      case "sheet":
+        openSheet(action.sheet);
+        break;
+      case "push":
+        pushPage(action.page);
+        break;
+      case "run":
+        // Intentionally leaves the palette open (theme toggle, workspace switch).
+        action.run();
+        break;
+    }
+  };
 
-  const otherWorkspaces =
-    workspaces?.filter((w) => w.slug !== workspace?.slug) ?? [];
+  const groups: CommandMenuGroup[] = page
+    ? page.type === "monitor"
+      ? monitorScopeGroups(page)
+      : statusPageScopeGroups({
+          page,
+          statusReports: data.sortedStatusReports,
+          maintenances: data.sortedMaintenances,
+        })
+    : [
+        monitorsGroup(data.monitors),
+        statusPagesGroup(data.statusPages),
+        statusReportsGroup(data.sortedStatusReports),
+        maintenancesGroup(data.sortedMaintenances, data.pageTitleById),
+        navigationGroup(),
+        createGroup(),
+        settingsGroup(),
+        workspacesGroup(data.otherWorkspaces, switchWorkspace),
+        helpGroup(),
+        ...(mounted ? [themeGroup(resolvedTheme, setTheme)] : []),
+      ].filter((g): g is CommandMenuGroup => g !== null);
+
+  const reportForUpdate =
+    activeSheet?.sheet === "status-report-update"
+      ? data.statusReports?.find((r) => r.id === activeSheet.reportId)
+      : undefined;
 
   return (
     <>
@@ -191,7 +189,7 @@ export function CommandMenu() {
               <Search className="size-4 shrink-0 opacity-50" />
               {page ? (
                 <span className="bg-muted text-muted-foreground inline-flex shrink-0 items-center gap-1 rounded border px-1.5 py-0.5 text-xs">
-                  {page.type === "monitor" ? page.name : page.title}
+                  {pageLabel(page)}
                   <button
                     type="button"
                     aria-label="Clear scope"
@@ -212,195 +210,60 @@ export function CommandMenu() {
                 className="placeholder:text-muted-foreground flex h-10 w-full bg-transparent py-3 text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50"
               />
             </div>
-            <CommandList>
+            {/* inline style: twMerge drops the ui default max-h when a class
+                overrides it, and a missed JIT class would leave the list
+                unbounded — the style prop can't silently fail */}
+            <CommandList style={{ maxHeight: "min(400px, 65vh)" }}>
               <CommandEmpty>No results found.</CommandEmpty>
-
-              {page ? (
-                <CommandGroup
-                  heading={page.type === "monitor" ? page.name : page.title}
-                >
-                  {(page.type === "monitor"
-                    ? MONITOR_ACTIONS(page.id)
-                    : STATUS_PAGE_ACTIONS(page.id)
-                  ).map((item) => (
-                    <CommandItem
-                      key={item.href}
-                      value={item.label}
-                      keywords={item.keywords}
-                      onSelect={() => navigate(item.href)}
-                    >
-                      <item.icon />
-                      <span>{item.label}</span>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              ) : (
-                <>
-                  {monitors === undefined ? (
-                    <CommandLoading>Loading…</CommandLoading>
-                  ) : null}
-
-                  {monitors && monitors.length > 0 ? (
-                    <CommandGroup heading="Monitors">
-                      {idleCap(monitors).map((m) => (
-                        <CommandItem
-                          key={m.id}
-                          value={`monitor-${m.id}`}
-                          keywords={[m.name, m.url]}
-                          onSelect={() =>
-                            pushPage({
-                              type: "monitor",
-                              id: m.id,
-                              name: m.name,
-                            })
-                          }
-                        >
-                          <div className="grid min-w-0">
-                            <span className="truncate">{m.name}</span>
-                            <span className="text-muted-foreground truncate text-xs">
-                              {m.url}
-                            </span>
-                          </div>
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  ) : null}
-
-                  {statusPages && statusPages.length > 0 ? (
-                    <CommandGroup heading="Status Pages">
-                      {idleCap(statusPages).map((p) => (
-                        <CommandItem
-                          key={p.id}
-                          value={`status-page-${p.id}`}
-                          keywords={[p.title, p.slug, p.customDomain].filter(
-                            Boolean,
-                          )}
-                          onSelect={() =>
-                            pushPage({
-                              type: "status-page",
-                              id: p.id,
-                              title: p.title,
-                            })
-                          }
-                        >
-                          <div className="grid min-w-0">
-                            <span className="truncate">{p.title}</span>
-                            <span className="text-muted-foreground truncate text-xs">
-                              {p.slug}
-                            </span>
-                          </div>
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  ) : null}
-
-                  <CommandGroup heading="Navigation">
-                    {NAVIGATION.map((item) => (
-                      <LinkItem
-                        key={item.href}
-                        item={item}
-                        onSelect={selectLink}
-                      />
-                    ))}
-                  </CommandGroup>
-
-                  <CommandGroup heading="Create">
-                    {CREATE_LINKS.map((item) => (
-                      <LinkItem
-                        key={item.href}
-                        item={item}
-                        onSelect={selectLink}
-                      />
-                    ))}
-                    {CREATE_ACTIONS.map((action) => (
-                      <ActionItem
-                        key={action.sheet}
-                        action={action}
-                        onSelect={() => openSheet(action.sheet)}
-                      />
-                    ))}
-                  </CommandGroup>
-
-                  <CommandGroup heading="Settings">
-                    {SETTINGS.map((item) => (
-                      <LinkItem
-                        key={item.href}
-                        item={item}
-                        onSelect={selectLink}
-                      />
-                    ))}
-                  </CommandGroup>
-
-                  {otherWorkspaces.length > 0 ? (
-                    <CommandGroup heading="Workspace">
-                      {otherWorkspaces.map((w) => (
-                        <CommandItem
-                          key={w.id}
-                          value={`workspace-${w.id}`}
-                          keywords={[w.name || "Untitled Workspace", w.slug]}
-                          onSelect={() => switchWorkspace(w.slug)}
-                        >
-                          <span className="truncate">
-                            {w.name || "Untitled Workspace"}
-                          </span>
-                          <span className="text-muted-foreground truncate font-mono text-xs">
-                            {w.slug}
-                          </span>
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  ) : null}
-
-                  <CommandGroup heading="Get Help">
-                    <ActionItem
-                      action={HELP_SUPPORT_ACTION}
-                      onSelect={() => openSheet("support")}
-                    />
-                    {HELP_LINK_ITEMS.map((item) => (
-                      <LinkItem
-                        key={item.href}
-                        item={item}
-                        onSelect={selectLink}
-                      />
-                    ))}
-                  </CommandGroup>
-
-                  {mounted ? (
-                    <CommandGroup heading="Theme">
-                      <CommandItem
-                        value="toggle-theme"
-                        keywords={["dark", "light", "appearance"]}
-                        onSelect={() =>
-                          setTheme(resolvedTheme === "dark" ? "light" : "dark")
-                        }
-                      >
-                        {resolvedTheme === "dark" ? <Light /> : <Dark />}
-                        <span>
-                          Switch to{" "}
-                          {resolvedTheme === "dark" ? "light" : "dark"} theme
-                        </span>
-                      </CommandItem>
-                    </CommandGroup>
-                  ) : null}
-                </>
-              )}
+              {!page && data.monitors === undefined ? (
+                <CommandLoading>Loading…</CommandLoading>
+              ) : null}
+              {groups.map((group) => (
+                <GroupView
+                  key={group.heading}
+                  group={group}
+                  search={search}
+                  onAction={dispatch}
+                />
+              ))}
             </CommandList>
           </Command>
         </DialogContent>
       </Dialog>
 
       <FormSheetStatusReportCreate
-        open={activeSheet === "status-report"}
-        onOpenChange={(o) => setActiveSheet(o ? "status-report" : null)}
+        open={activeSheet?.sheet === "status-report"}
+        onOpenChange={(o) =>
+          setActiveSheet(o ? { sheet: "status-report" } : null)
+        }
+        defaultPageId={
+          activeSheet?.sheet === "status-report"
+            ? activeSheet.pageId
+            : undefined
+        }
       />
       <FormSheetMaintenanceCreate
-        open={activeSheet === "maintenance"}
-        onOpenChange={(o) => setActiveSheet(o ? "maintenance" : null)}
+        open={activeSheet?.sheet === "maintenance"}
+        onOpenChange={(o) =>
+          setActiveSheet(o ? { sheet: "maintenance" } : null)
+        }
+        defaultPageId={
+          activeSheet?.sheet === "maintenance" ? activeSheet.pageId : undefined
+        }
       />
       <FormDialogSupportContact
-        open={activeSheet === "support"}
-        onOpenChange={(o) => setActiveSheet(o ? "support" : null)}
+        open={activeSheet?.sheet === "support"}
+        onOpenChange={(o) => setActiveSheet(o ? { sheet: "support" } : null)}
       />
+      {reportForUpdate ? (
+        <FormSheetStatusReportUpdateCreate
+          report={reportForUpdate}
+          open={activeSheet?.sheet === "status-report-update"}
+          onOpenChange={(o) => {
+            if (!o) setActiveSheet(null);
+          }}
+        />
+      ) : null}
     </>
   );
 }
